@@ -1,7 +1,7 @@
 # wazuhMailReport
 Bash script that sends a daily report-mail to admins giving an overview over server and alert-statistics
 
-**Still under devolopement, use with caution**
+<table><tr><td> **Still under development, use with caution!** </td></tr></table>
 
 ## Requirements
 
