@@ -4,9 +4,6 @@ Bash script that sends a daily report-mail to admins giving an overview over ser
 > [!WARNING]
 > Still under development, use with caution!
 
-<br>
-
-
 ## Requirements
 
 Running Wazuh instance and PostFix 
