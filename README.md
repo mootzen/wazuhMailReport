@@ -28,3 +28,4 @@ by calling script manually
 /bin/bash /usr/local/bin/report.sh
 ```
 ## Example-Mail
+![report](https://github.com/user-attachments/assets/a67ff74b-ce7f-45b1-bcb9-8ef5838c55b5)
