@@ -1,6 +1,8 @@
 # wazuhMailReport
 Bash script that sends a daily report-mail to admins giving an overview over server and alert-statistics
 
+## Prototype, use with caution
+
 ## Requirements
 
 Running Wazuh instance and PostFix 
@@ -33,4 +35,3 @@ by calling script manually
 ```
 ## Example-Mail
 ![report](https://github.com/user-attachments/assets/f04463d7-07a0-422b-8a2a-95c44640075a)
-
