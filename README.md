@@ -6,7 +6,9 @@ Bash script that sends a daily report-mail to admins giving an overwiev over ser
 ```bash
 sudo nano /usr/local/bin/report.sh
 ```
-### Paste script contents and modify target mail-address and adust rule-level triggers
+### Adust script
+
+Paste script contents and modify target mail-address and adust rule-level triggers
 
 ### make the script executable
 ```bash
@@ -20,3 +22,9 @@ run daily at 10am
 ```
 0 10 * * * /usr/local/bin/report.sh
 ```
+### Test Mail 
+by calling script manually
+```bash
+/bin/bash /usr/local/bin/report.sh
+```
+## Example-Mail
