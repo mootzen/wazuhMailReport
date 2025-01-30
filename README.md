@@ -1,6 +1,10 @@
 # wazuhMailReport
 Bash script that sends a daily report-mail to admins giving an overwiev over server and alert-statistics
 
+## Requirements
+
+Running Wazuh instance and PostFix 
+
 ## Install:
 ### Create new file as sudo: 
 ```bash
@@ -28,4 +32,5 @@ by calling script manually
 /bin/bash /usr/local/bin/report.sh
 ```
 ## Example-Mail
-![report](https://github.com/user-attachments/assets/a67ff74b-ce7f-45b1-bcb9-8ef5838c55b5)
+![report](https://github.com/user-attachments/assets/f04463d7-07a0-422b-8a2a-95c44640075a)
+
