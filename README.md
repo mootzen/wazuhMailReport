@@ -1,5 +1,5 @@
 # wazuhMailReport
-Bash script that sends a daily report-mail to admins giving an overwiev over server and alert-statistics
+Bash script that sends a daily report-mail to admins giving an overview over server and alert-statistics
 
 ## Requirements
 
