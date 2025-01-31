@@ -3,7 +3,7 @@
 # Variables
 REPO_URL="https://github.com/mootzen/wazuhMailReport.git"
 INSTALL_DIR="/usr/local/wazuhMailReport"
-SCRIPT_NAME="wazuh_alert_report.sh"
+SCRIPT_NAME="report.sh"
 SCRIPT_PATH="$INSTALL_DIR/$SCRIPT_NAME"
 CRON_JOB="/etc/cron.d/wazuh_report"
 
