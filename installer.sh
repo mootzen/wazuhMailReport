@@ -28,8 +28,8 @@ fi
 # Set permissions
 chmod +x "$SCRIPT_PATH"
 
-# Create cron job (runs daily at midnight)
-echo "0 0 * * * root $SCRIPT_PATH" > "$CRON_JOB"
+# Create cron job (runs daily at 10am)
+echo "0 10 * * * root $SCRIPT_PATH" > "$CRON_JOB"
 chmod 644 "$CRON_JOB"
 
 # Done
