@@ -35,4 +35,4 @@ by calling script manually
 /bin/bash /usr/local/bin/report.sh
 ```
 ## Example-Mail
-![report](https://github.com/user-attachments/assets/f04463d7-07a0-422b-8a2a-95c44640075a)
+![report](https://github.com/user-attachments/assets/0bf8bb90-70d8-4445-b189-508042c3323d)
