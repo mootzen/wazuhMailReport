@@ -28,10 +28,10 @@ bash install.sh
 ```
 The installer will:
 
-    Install necessary dependencies (jq, mailutils)
-    Clone the repository to /usr/local/wazuhMailReport
-    Set up a cron job to run the report daily at midnight
-    Ensure correct file permissions
+- Install necessary dependencies (jq, mailutils)
+- Clone the repository to /usr/local/wazuhMailReport
+- Set up a cron job to run the report daily at midnight
+- Ensure correct file permissions
 
 ⚙️ Configuration
 
@@ -51,15 +51,41 @@ To test the report manually, run:
 
 ⏰ Scheduled Execution (Cron)
 
-The installer sets up an automatic execution using cron:
-
-0 0 * * * /usr/local/wazuhMailReport/wazuh_alert_report.sh
-
-This runs the report daily at midnight.
-
-To change the schedule, edit the cron job:
-
 crontab -e
+
+Run daily at 10 AM:
+
+0 10 * * * /usr/local/bin/report.sh
+
+Test email
+
+Run the script manually:
+
+/bin/bash /usr/local/bin/report.sh
+
+📌 Usage
+
+The script runs automatically via the cron job, but you can manually trigger it with:
+
+/usr/local/wazuhMailReport/wazuh_alert_report.sh
+
+To check for errors:
+
+cat /var/ossec/logs/alerts/jq_errors.log
+
+🔄 Updating
+
+To update to the latest version:
+
+cd /usr/local/wazuhMailReport
+git pull
+
+❌ Uninstallation
+
+To remove the script:
+
+rm -rf /usr/local/wazuhMailReport
+sed -i '/wazuh_alert_report.sh/d' /etc/crontab
 
 ## Example-Mail
 ![report](https://github.com/user-attachments/assets/0bf8bb90-70d8-4445-b189-508042c3323d)
