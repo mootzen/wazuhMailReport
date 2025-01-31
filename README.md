@@ -61,13 +61,6 @@ crontab -e
 0 10 * * * /usr/local/bin/report.sh
 ```
 
-### Test email
-
-Run the script manually:
-```bash
-/bin/bash /usr/local/bin/report.sh
-```
-
 ## 📌 Usage
 
 ### The script runs automatically via the cron job, but you can manually trigger it with:
