@@ -6,7 +6,7 @@ Bash script that sends a daily report-mail to admins giving an overview over ser
 
 ## Requirements
 
-Running Wazuh instance and PostFix 
+Running Wazuh instance and PostFix (not tested in Docker)
 
 ## Install:
 ### Create new file as sudo: 
