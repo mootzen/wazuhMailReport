@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Define variables
+LEVEL=12  # Rule level to define critical alerts (e.g., 12 for critical alerts)
+TIME_PERIOD="24 hours"  # Time period (e.g., "24 hours")
+TOP_ALERTS_COUNT=10  # Number of top alerts to display
+
+# Set up Recipient-Address and Mail-Subject
+MAIL_TO="your@mail.com" # <------------ Change this to your mail address 
+MAIL_SUBJECT="Wazuh Daily Report - $(date)"
+
+# Calculate the time since set Time-Period (for filtering)
+START_TIME=$(date --date="$TIME_PERIOD ago" --utc +%Y-%m-%dT%H:%M:%SZ)
+
 # Define output directory
 OUTPUT_DIR="/var/ossec/logs/reports"
 mkdir -p "$OUTPUT_DIR"
@@ -39,55 +51,37 @@ jq_safe() {
     fi
 }
 
-# Top 10 Non-Critical Alerts (Level < 12)
-echo "<h3>🚨 Top 10 Non-Critical Alerts (Level < 12)</h3>" >> "$REPORT_FILE"
-echo "<p>These are the top 10 non-critical alerts (level < 12) from the last 24 hours:</p>" >> "$REPORT_FILE"
+# Top Non-Critical Alerts (Level < $LEVEL)
+echo "<h3>🚨 Top Non-Critical Alerts (Level < $LEVEL) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
+echo "<p>These are the top $TOP_ALERTS_COUNT non-critical alerts (level < $LEVEL) from the last $TIME_PERIOD:</p>" >> "$REPORT_FILE"
 echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
 
-# Get Non-Critical Alerts
+# Get Top Non-Critical Alerts (level < $LEVEL) based on time period
 jq_safe "/var/ossec/logs/alerts/alerts.json" '
-    select(type == "object") | select(.rule.level < 12) |
+    select(type == "object") | select(.rule.level < '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' | sort | uniq -c | sort -nr | head -10 | \
-awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
-
-# Debug: Output the same content to the terminal to check if data is being captured
-jq_safe "/var/ossec/logs/alerts/alerts.json" '
-    select(type == "object") | select(.rule.level < 12) |
-    "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' | sort | uniq -c | sort -nr | head -10
-
-echo "</table>" >> "$REPORT_FILE"
-
-# Top 10 Critical Alerts (Level ≥ 12)
-echo "<h3>📩 Top 10 Critical Alerts (Level ≥ 12)</h3>" >> "$REPORT_FILE"
-echo "<p>These are the top 10 critical alerts (level ≥ 12) that triggered email notifications in the last 24 hours:</p>" >> "$REPORT_FILE"
-echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
-
-# Get Critical Alerts (Level ≥ 12)
-jq_safe "/var/ossec/logs/alerts/alerts.json" '
-    select(type == "object") | select(.rule.level > 11) |
-    "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' | sort | uniq -c | sort -nr | head -10 | \
+' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT | \
 awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
 
 echo "</table>" >> "$REPORT_FILE"
 
-# Debug: Print Critical Alerts to Terminal for Inspection
-echo "Debugging Critical Alerts (Level >= 12):"
+# Top Critical Alerts (Level >= $LEVEL)
+echo "<h3>📩 Top Critical Alerts (Level ≥ $LEVEL) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
+echo "<p>These are the top $TOP_ALERTS_COUNT critical alerts (level ≥ $LEVEL) from the last $TIME_PERIOD:</p>" >> "$REPORT_FILE"
+echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
+
+# Get Top Critical Alerts (level >= $LEVEL) based on time period
 jq_safe "/var/ossec/logs/alerts/alerts.json" '
-    select(type == "object") | select(.rule.level > 11) |
+    select(type == "object") | select(.rule.level >= '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' | sort | uniq -c | sort -nr | head -10
+' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT | \
+awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
 
 echo "</table>" >> "$REPORT_FILE"
 
 # Close HTML
 echo "</body></html>" >> "$REPORT_FILE"
 
-# Send the email with HTML formatting
-MAIL_TO="your@mail.com" # <------------ Change this to your mail address 
-MAIL_SUBJECT="Wazuh Daily Report - $(date)"
 (
 echo "Subject: $MAIL_SUBJECT"
 echo "MIME-Version: 1.0"
