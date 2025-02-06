@@ -24,7 +24,7 @@ REPORT_FILE="$OUTPUT_DIR/daily_wazuh_report.html"
 echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
 
 # Greeting & Summary
-echo "<h2 style='color:powderblue;'>🔹 Daily Wazuh Report - $(date)</h2>" >> "$REPORT_FILE"
+echo "<h2 style='color:blue;'>🔹 Daily Wazuh Report - $(date)</h2>" >> "$REPORT_FILE"
 echo "<p>Hello Team,</p><p>Here's the daily Wazuh alert summary:</p>" >> "$REPORT_FILE"
 
 # Disk & Swap Usage
