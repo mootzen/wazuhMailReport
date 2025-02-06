@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Define variables
-LEVEL=12  # Rule level to define critical alerts (e.g., 12 for critical alerts)
-TIME_PERIOD="24 hours"  # Time period (e.g., "24 hours")
-TOP_ALERTS_COUNT=10  # Number of top alerts to display
+# Load config file
+CONFIG_FILE="/etc/wazuhMailReport.conf"
 
-# Set up Recipient-Address, Mail-Subject & Sender-Address
-MAIL_TO="your@mail.com" # <------------ Change this to your mail address 
-MAIL_SUBJECT="Wazuh Daily Report - $(date)"
-MAIL_FROM="reporter@wazuh"  # Modify this to your desired sender address (might)
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+else
+    echo "Error: Config file not found at $CONFIG_FILE"
+    exit 1
+fi
 
 # Calculate the time since set Time-Period (for filtering)
 START_TIME=$(date --date="$TIME_PERIOD ago" --utc +%Y-%m-%dT%H:%M:%SZ)
