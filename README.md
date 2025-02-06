@@ -68,7 +68,7 @@ crontab -e
 ```bash
 /usr/local/wazuhMailReport/wazuh_alert_report.sh
 ```
-### To check for errors:
+### Check for errors:
 
 ```bash
 cat /var/ossec/logs/alerts/jq_errors.log
@@ -76,7 +76,7 @@ cat /var/ossec/logs/alerts/jq_errors.log
 
 ## 🔄 Updating
 
-### To update to the latest version:
+### Update to the latest version:
 
 ```bash
 cd /usr/local/wazuhMailReport
@@ -85,7 +85,7 @@ git pull
 
 ## ❌ Uninstallation
 
-### To remove the script:
+### Remove the script:
 ``` bash
 rm -rf /usr/local/wazuhMailReport
 sed -i '/wazuh_alert_report.sh/d' /etc/crontab
