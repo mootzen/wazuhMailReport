@@ -47,24 +47,24 @@ jq_safe() {
     local count=0
     local success=0
     local output=""
-    local start_time=$(date +%s)  # Record the start time for timeout
-    
+    local start_time=$(date +%s)  # Record start time for timeout
+
     while [[ $count -lt $retries && $success -eq 0 ]]; do
         output=$(jq -r "$2" "$1" 2>/tmp/jq_error.log)  # Capture only errors separately
 
-        # Check if jq ran successfully
         if [[ $? -ne 0 ]]; then
-            if grep -q "Permission denied" /tmp/jq_error.log; then
+            local error_msg=$(cat /tmp/jq_error.log)
+            if grep -q "Permission denied" <<< "$error_msg"; then
                 echo "Warning: jq permission error. Retrying... ($((count+1))/$retries)" >> /var/ossec/logs/alerts/jq_errors.log
-            else
-                echo "Warning: jq error: $(cat /tmp/jq_error.log)" >> /var/ossec/logs/alerts/jq_errors.log
-                return 1  # Exit with error code if it's not a permission issue
+            elif [[ ! -z "$error_msg" ]]; then
+                echo "Warning: jq error: $error_msg" >> /var/ossec/logs/alerts/jq_errors.log
+                return 1  # Exit if it's not a permission issue
             fi
         else
-            success=1  # Mark success if jq command works
-            echo "$output"  # Only print valid JSON output
+            success=1
+            echo "$output"  # ✅ Only return valid JSON output, do not log it
         fi
-        
+
         ((count++))
         sleep $wait_time
     done
