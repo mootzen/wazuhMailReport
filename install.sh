@@ -5,7 +5,7 @@ REPO_URL="https://github.com/mootzen/wazuhMailReport.git"
 INSTALL_DIR="/usr/local/wazuhMailReport"
 SCRIPT_NAME="wazuh_alert_report.sh"
 SCRIPT_PATH="$INSTALL_DIR/$SCRIPT_NAME"
-CONFIG_FILE="$INSTALL_DIR/config.conf"
+CONFIG_FILE="$INSTALL_DIR/report.conf"
 CRON_JOB="/etc/cron.d/wazuh_report"
 
 # Ensure script is run as root
