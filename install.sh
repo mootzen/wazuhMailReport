@@ -5,6 +5,7 @@ REPO_URL="https://github.com/mootzen/wazuhMailReport.git"
 INSTALL_DIR="/usr/local/wazuhMailReport"
 SCRIPT_NAME="wazuh_alert_report.sh"
 SCRIPT_PATH="$INSTALL_DIR/$SCRIPT_NAME"
+CONFIG_FILE="$INSTALL_DIR/config.conf"
 CRON_JOB="/etc/cron.d/wazuh_report"
 
 # Ensure script is run as root
@@ -23,6 +24,24 @@ if [[ -d "$INSTALL_DIR" ]]; then
 else
     echo "Cloning repository..."
     git clone "$REPO_URL" "$INSTALL_DIR"
+fi
+
+# Ensure config file exists
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo "Creating default configuration file..."
+    cat <<EOL > "$CONFIG_FILE"
+LEVEL=12
+TIME_PERIOD="24 hours"
+TOP_ALERTS_COUNT=10
+MAIL_TO="your@mail.com"
+MAIL_SUBJECT="Wazuh Daily Report - \$(date)"
+MAIL_FROM="reporter@wazuh"
+FONT="Arial, sans-serif"
+HEADING_COLOR="powderblue"
+ENABLE_EMOJI=1
+SHOW_METRICS=1
+EOL
+    chmod 644 "$CONFIG_FILE"
 fi
 
 # Set permissions
