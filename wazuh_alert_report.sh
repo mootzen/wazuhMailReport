@@ -87,7 +87,10 @@ NON_CRITICAL_ALERTS=$(jq_safe "/var/ossec/logs/alerts/alerts.json" '
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
 
-if [[ -z "$NON_CRITICAL_ALERTS" ]]; then
+# Fix: Count the number of lines
+NON_CRITICAL_COUNT=$(echo "$NON_CRITICAL_ALERTS" | wc -l)
+
+if [[ "$NON_CRITICAL_COUNT" -eq 0 || -z "$NON_CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No non-critical alerts found in the last $TIME_PERIOD.</p>" >> "$REPORT_FILE"
 else
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
