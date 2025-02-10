@@ -80,30 +80,38 @@ jq_safe() {
 # Top Non-Critical Alerts (Level < $LEVEL)
 echo "<h3>🚨 Top Non-Critical Alerts (Level < $LEVEL) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
 echo "<p>These are the top $TOP_ALERTS_COUNT non-critical alerts (level < $LEVEL) from the last $TIME_PERIOD:</p>" >> "$REPORT_FILE"
-echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
 
-# Get Top Non-Critical Alerts (level < $LEVEL) based on time period
-jq_safe "/var/ossec/logs/alerts/alerts.json" '
+# Get Top Non-Critical Alerts (level < $LEVEL)
+NON_CRITICAL_ALERTS=$(jq_safe "/var/ossec/logs/alerts/alerts.json" '
     select(type == "object") | select(.rule.level < '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT | \
-awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
 
-echo "</table>" >> "$REPORT_FILE"
+if [[ -z "$NON_CRITICAL_ALERTS" ]]; then
+    echo "<p style='color: gray;'>No non-critical alerts found in the last $TIME_PERIOD.</p>" >> "$REPORT_FILE"
+else
+    echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
+    echo "$NON_CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+    echo "</table>" >> "$REPORT_FILE"
+fi
 
-# Top Critical Alerts (Level >= $LEVEL)
+# Top Critical Alerts (Level ≥ $LEVEL)
 echo "<h3>📩 Top Critical Alerts (Level ≥ $LEVEL) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
 echo "<p>These are the top $TOP_ALERTS_COUNT critical alerts (level ≥ $LEVEL) from the last $TIME_PERIOD:</p>" >> "$REPORT_FILE"
-echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
 
-# Get Top Critical Alerts (level >= $LEVEL) based on time period
-jq_safe "/var/ossec/logs/alerts/alerts.json" '
+# Get Top Critical Alerts (level >= $LEVEL)
+CRITICAL_ALERTS=$(jq_safe "/var/ossec/logs/alerts/alerts.json" '
     select(type == "object") | select(.rule.level >= '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT | \
-awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
 
-echo "</table>" >> "$REPORT_FILE"
+if [[ -z "$CRITICAL_ALERTS" ]]; then
+    echo "<p style='color: gray;'>No critical alerts found in the last $TIME_PERIOD.</p>" >> "$REPORT_FILE"
+else
+    echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
+    echo "$CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+    echo "</table>" >> "$REPORT_FILE"
+fi
 
 # Close HTML
 echo "</body></html>" >> "$REPORT_FILE"
