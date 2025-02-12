@@ -1,51 +1,118 @@
-#!/bin/bash
+##!/bin/bash
 
-# Load configuration
-CONFIG_FILE="/usr/local/wazuhMailReport/report.conf"
-if [ -f "$CONFIG_FILE" ]; then
+# Load config file
+CONFIG_FILE="./report.conf"
+
+if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
-    echo "Error: Config file not found at $CONFIG_FILE. Using defaults."
+    echo "Error: Config file not found at $CONFIG_FILE"
+    exit 1
 fi
 
-# Set defaults if not defined in config
-LEVEL=${LEVEL:-12}
-TIME_PERIOD=${TIME_PERIOD:-"24 hours"}
-TOP_ALERTS_COUNT=${TOP_ALERTS_COUNT:-10}
-MAIL_TO=${MAIL_TO:-"your@mail.com"}
-MAIL_SUBJECT=${MAIL_SUBJECT:-"Wazuh Daily Report - $(date)"}
-MAIL_FROM=${MAIL_FROM:-"reporter@wazuh"}
-FONT=${FONT:-"Arial, sans-serif"}
-HEADING_COLOR=${HEADING_COLOR:-"powderblue"}
-ENABLE_EMOJI=${ENABLE_EMOJI:-1}
-SHOW_METRICS=${SHOW_METRICS:-1}
-
-# Check for manual email argument
-if [ $# -gt 0 ]; then
-    MAIL_TO=$1
-fi
-
-# Calculate the start time for filtering
+# Calculate the time since set Time-Period (for filtering)
 START_TIME=$(date --date="$TIME_PERIOD ago" --utc +%Y-%m-%dT%H:%M:%SZ)
 
-# Define output directory and file
+# Define output directory
 OUTPUT_DIR="/var/ossec/logs/reports"
 mkdir -p "$OUTPUT_DIR"
+
+# Define output file (HTML format)
 REPORT_FILE="$OUTPUT_DIR/daily_wazuh_report.html"
 
 # Start HTML report
-echo "<html><body style='font-family: $FONT;'>" > "$REPORT_FILE"
+echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
 
-echo "<h2 style='color:$HEADING_COLOR;'>${ENABLE_EMOJI:+🔹} Daily Wazuh Report - $(date)</h2>" >> "$REPORT_FILE"
+# Greeting & Summary
+echo "<h2 style='color:blue;'>🔹 Daily Wazuh Report - $(date)</h2>" >> "$REPORT_FILE"
 echo "<p>Hello Team,</p><p>Here's the daily Wazuh alert summary:</p>" >> "$REPORT_FILE"
 
-if [ "$SHOW_METRICS" -eq 1 ]; then
-    echo "<h3>${ENABLE_EMOJI:+📊} System Metrics</h3>" >> "$REPORT_FILE"
-    echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
-    echo "<tr><th>Metric</th><th>Value</th></tr>" >> "$REPORT_FILE"
-    echo "<tr><td>CPU Usage</td><td>$(top -bn1 | grep 'Cpu(s)' | awk '{print 100 - $8"%"}')"</td></tr>" >> "$REPORT_FILE"
-    echo "<tr><td>Memory Usage</td><td>$(free | grep Mem | awk '{print ($3/$2) * 100 "%"}')"</td></tr>" >> "$REPORT_FILE"
-    echo "<tr><td>Network Usage</td><td>$(ip -s link show eth0 | awk 'NR==4 {print $1 " bytes received, " $2 " bytes sent"}')"</td></tr>" >> "$REPORT_FILE"
+# Disk & Swap Usage
+echo "<h3>💾 Disk Usage</h3>" >> "$REPORT_FILE"
+echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
+echo "<tr><th>Filesystem</th><th>Size</th><th>Used</th><th>Avail</th><th>Use%</th></tr>" >> "$REPORT_FILE"
+df -h | grep "/dev/mapper/ubuntu--vg-ubuntu--lv" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"$4"</td><td>"$5"</td></tr>"}' >> "$REPORT_FILE"
+echo "</table>" >> "$REPORT_FILE"
+
+echo "<h3>🔄 Swap Usage</h3>" >> "$REPORT_FILE"
+echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Total</th><th>Used</th><th>Free</th></tr>" >> "$REPORT_FILE"
+free -h | grep "Swap" | awk '{print "<tr><td>"$2"</td><td>"$3"</td><td>"$4"</td></tr>"}' >> "$REPORT_FILE"
+echo "</table>" >> "$REPORT_FILE"
+
+# Function to safely run jq with error handling, retries, and timeout - when indexer writes to the json we cannot read it
+jq_safe() {
+    local retries=10
+    local wait_time=10  # Wait time between retries in seconds
+    local timeout=60    # Total timeout for retries in seconds
+    local count=0
+    local success=0
+    local output=""
+    local start_time=$(date +%s)  # Record start time for timeout
+
+    while [[ $count -lt $retries && $success -eq 0 ]]; do
+        output=$(jq -r "$2" "$1" 2>/tmp/jq_error.log)  # Capture only errors separately
+
+        if [[ $? -ne 0 ]]; then
+            local error_msg=$(cat /tmp/jq_error.log)
+            if grep -q "Permission denied" <<< "$error_msg"; then
+                echo "Warning: jq permission error. Retrying... ($((count+1))/$retries)" >> /var/ossec/logs/alerts/jq_errors.log
+            elif [[ ! -z "$error_msg" ]]; then
+                echo "Warning: jq error: $error_msg" >> /var/ossec/logs/alerts/jq_errors.log
+                return 1  # Exit if it's not a permission issue
+            fi
+        else
+            success=1
+            echo "$output"  # ✅ Only return valid JSON output, do not log it
+        fi
+
+        ((count++))
+        sleep $wait_time
+    done
+
+    if [[ $success -eq 0 ]]; then
+        echo "Error: jq failed after $retries retries." >> /var/ossec/logs/alerts/jq_errors.log
+        return 1
+    fi
+
+    return 0
+}
+
+# Top Non-Critical Alerts (Level < $LEVEL)
+echo "<h3>🚨 Top Non-Critical Alerts (Level < $LEVEL) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
+echo "<p>These are the top $TOP_ALERTS_COUNT non-critical alerts (level < $LEVEL) from the last $TIME_PERIOD:</p>" >> "$REPORT_FILE"
+
+# Get Top Non-Critical Alerts (level < $LEVEL)
+NON_CRITICAL_ALERTS=$(jq_safe "/var/ossec/logs/alerts/alerts.json" '
+    select(type == "object") | select(.rule.level < '$LEVEL' and .timestamp >= "'$START_TIME'") |
+    "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
+' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
+
+# Fix: Count the number of lines
+NON_CRITICAL_COUNT=$(echo "$NON_CRITICAL_ALERTS" | wc -l)
+
+if [[ "$NON_CRITICAL_COUNT" -eq 0 || -z "$NON_CRITICAL_ALERTS" ]]; then
+    echo "<p style='color: gray;'>No non-critical alerts found in the last $TIME_PERIOD.</p>" >> "$REPORT_FILE"
+else
+    echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
+    echo "$NON_CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+    echo "</table>" >> "$REPORT_FILE"
+fi
+
+# Top Critical Alerts (Level ≥ $LEVEL)
+echo "<h3>📩 Top Critical Alerts (Level ≥ $LEVEL) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
+echo "<p>These are the top $TOP_ALERTS_COUNT critical alerts (level ≥ $LEVEL) from the last $TIME_PERIOD:</p>" >> "$REPORT_FILE"
+
+# Get Top Critical Alerts (level >= $LEVEL)
+CRITICAL_ALERTS=$(jq_safe "/var/ossec/logs/alerts/alerts.json" '
+    select(type == "object") | select(.rule.level >= '$LEVEL' and .timestamp >= "'$START_TIME'") |
+    "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
+' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
+
+if [[ -z "$CRITICAL_ALERTS" ]]; then
+    echo "<p style='color: gray;'>No critical alerts found in the last $TIME_PERIOD.</p>" >> "$REPORT_FILE"
+else
+    echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
+    echo "$CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
 fi
 
