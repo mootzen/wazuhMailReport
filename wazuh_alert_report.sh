@@ -2,7 +2,6 @@
 
 # Load config file
 CONFIG_FILE="./report.conf"
-
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
@@ -20,10 +19,17 @@ mkdir -p "$OUTPUT_DIR"
 # Define output file (HTML format)
 REPORT_FILE="$OUTPUT_DIR/daily_wazuh_report.html"
 
-# Copy alerts.json to a temporary location to avoid file access issues
-TEMP_ALERTS="/tmp/alerts.json"
-cp /var/ossec/logs/alerts/alerts.json "$TEMP_ALERTS"
-chmod 644 "$TEMP_ALERTS"
+# Determine previous day's log file
+YESTERDAY=$(date --date="yesterday" +%Y%m%d)
+PREV_LOG="/var/ossec/logs/alerts/alerts-$YESTERDAY.json"
+
+# Copy and merge log files to avoid read conflicts
+cp /var/ossec/logs/alerts/alerts.json /tmp/alerts.json 2>/dev/null
+if [[ -f "$PREV_LOG" ]]; then
+    jq -s 'add' /tmp/alerts.json "$PREV_LOG" > /tmp/alerts_combined.json
+else
+    cp /tmp/alerts.json /tmp/alerts_combined.json
+fi
 
 # Start HTML report
 echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
@@ -32,19 +38,7 @@ echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
 echo "<h2 style='color:blue;'>🔹 Daily Wazuh Report - $(date)</h2>" >> "$REPORT_FILE"
 echo "<p>Hello Team,</p><p>Here's the daily Wazuh alert summary:</p>" >> "$REPORT_FILE"
 
-# Disk & Swap Usage
-echo "<h3>💾 Disk Usage</h3>" >> "$REPORT_FILE"
-echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
-echo "<tr><th>Filesystem</th><th>Size</th><th>Used</th><th>Avail</th><th>Use%</th></tr>" >> "$REPORT_FILE"
-df -h | grep "/dev/mapper/ubuntu--vg-ubuntu--lv" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"$4"</td><td>"$5"</td></tr>"}' >> "$REPORT_FILE"
-echo "</table>" >> "$REPORT_FILE"
-
-echo "<h3>🔄 Swap Usage</h3>" >> "$REPORT_FILE"
-echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Total</th><th>Used</th><th>Free</th></tr>" >> "$REPORT_FILE"
-free -h | grep "Swap" | awk '{print "<tr><td>"$2"</td><td>"$3"</td><td>"$4"</td></tr>"}' >> "$REPORT_FILE"
-echo "</table>" >> "$REPORT_FILE"
-
-# Function to safely run jq
+# Function to safely run jq with error handling
 jq_safe() {
     jq -r "$2" "$1" 2>/dev/null
 }
@@ -53,7 +47,7 @@ jq_safe() {
 echo "<h3>🚨 Top Non-Critical Alerts (Level < $LEVEL) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
 echo "<p>These are the top $TOP_ALERTS_COUNT non-critical alerts (level < $LEVEL) from the last $TIME_PERIOD:</p>" >> "$REPORT_FILE"
 
-NON_CRITICAL_ALERTS=$(jq_safe "$TEMP_ALERTS" '
+NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
     select(type == "object") | select(.rule.level < '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
@@ -70,7 +64,7 @@ fi
 echo "<h3>📩 Top Critical Alerts (Level ≥ $LEVEL) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
 echo "<p>These are the top $TOP_ALERTS_COUNT critical alerts (level ≥ $LEVEL) from the last $TIME_PERIOD:</p>" >> "$REPORT_FILE"
 
-CRITICAL_ALERTS=$(jq_safe "$TEMP_ALERTS" '
+CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
     select(type == "object") | select(.rule.level >= '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
@@ -93,5 +87,8 @@ echo "Content-Type: text/html; charset=UTF-8"
 cat "$REPORT_FILE"
 ) | sendmail -f "$MAIL_FROM" "$MAIL_TO"
 
-# Clean up temporary alerts file
-rm -f "$TEMP_ALERTS"
+# Cleanup
+tmp_files=("/tmp/alerts.json" "/tmp/alerts_combined.json")
+for file in "${tmp_files[@]}"; do
+    [[ -f "$file" ]] && rm "$file"
+done
