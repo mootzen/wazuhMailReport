@@ -1,4 +1,4 @@
-##!/bin/bash
+#!/bin/bash
 
 # Load config file
 CONFIG_FILE="./report.conf"
@@ -20,6 +20,11 @@ mkdir -p "$OUTPUT_DIR"
 # Define output file (HTML format)
 REPORT_FILE="$OUTPUT_DIR/daily_wazuh_report.html"
 
+# Copy alerts.json to a temporary location to avoid file access issues
+TEMP_ALERTS="/tmp/alerts.json"
+cp /var/ossec/logs/alerts/alerts.json "$TEMP_ALERTS"
+chmod 644 "$TEMP_ALERTS"
+
 # Start HTML report
 echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
 
@@ -39,58 +44,21 @@ echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Total</th><th>Us
 free -h | grep "Swap" | awk '{print "<tr><td>"$2"</td><td>"$3"</td><td>"$4"</td></tr>"}' >> "$REPORT_FILE"
 echo "</table>" >> "$REPORT_FILE"
 
-# Function to safely run jq with error handling, retries, and timeout - when indexer writes to the json we cannot read it
+# Function to safely run jq
 jq_safe() {
-    local retries=10
-    local wait_time=10  # Wait time between retries in seconds
-    local timeout=60    # Total timeout for retries in seconds
-    local count=0
-    local success=0
-    local output=""
-    local start_time=$(date +%s)  # Record start time for timeout
-
-    while [[ $count -lt $retries && $success -eq 0 ]]; do
-        output=$(jq -r "$2" "$1" 2>/tmp/jq_error.log)  # Capture only errors separately
-
-        if [[ $? -ne 0 ]]; then
-            local error_msg=$(cat /tmp/jq_error.log)
-            if grep -q "Permission denied" <<< "$error_msg"; then
-                echo "Warning: jq permission error. Retrying... ($((count+1))/$retries)" >> /var/ossec/logs/alerts/jq_errors.log
-            elif [[ ! -z "$error_msg" ]]; then
-                echo "Warning: jq error: $error_msg" >> /var/ossec/logs/alerts/jq_errors.log
-                return 1  # Exit if it's not a permission issue
-            fi
-        else
-            success=1
-            echo "$output"  # ✅ Only return valid JSON output, do not log it
-        fi
-
-        ((count++))
-        sleep $wait_time
-    done
-
-    if [[ $success -eq 0 ]]; then
-        echo "Error: jq failed after $retries retries." >> /var/ossec/logs/alerts/jq_errors.log
-        return 1
-    fi
-
-    return 0
+    jq -r "$2" "$1" 2>/dev/null
 }
 
 # Top Non-Critical Alerts (Level < $LEVEL)
 echo "<h3>🚨 Top Non-Critical Alerts (Level < $LEVEL) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
 echo "<p>These are the top $TOP_ALERTS_COUNT non-critical alerts (level < $LEVEL) from the last $TIME_PERIOD:</p>" >> "$REPORT_FILE"
 
-# Get Top Non-Critical Alerts (level < $LEVEL)
-NON_CRITICAL_ALERTS=$(jq_safe "/var/ossec/logs/alerts/alerts.json" '
+NON_CRITICAL_ALERTS=$(jq_safe "$TEMP_ALERTS" '
     select(type == "object") | select(.rule.level < '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
 
-# Fix: Count the number of lines
-NON_CRITICAL_COUNT=$(echo "$NON_CRITICAL_ALERTS" | wc -l)
-
-if [[ "$NON_CRITICAL_COUNT" -eq 0 || -z "$NON_CRITICAL_ALERTS" ]]; then
+if [[ -z "$NON_CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No non-critical alerts found in the last $TIME_PERIOD.</p>" >> "$REPORT_FILE"
 else
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
@@ -102,8 +70,7 @@ fi
 echo "<h3>📩 Top Critical Alerts (Level ≥ $LEVEL) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
 echo "<p>These are the top $TOP_ALERTS_COUNT critical alerts (level ≥ $LEVEL) from the last $TIME_PERIOD:</p>" >> "$REPORT_FILE"
 
-# Get Top Critical Alerts (level >= $LEVEL)
-CRITICAL_ALERTS=$(jq_safe "/var/ossec/logs/alerts/alerts.json" '
+CRITICAL_ALERTS=$(jq_safe "$TEMP_ALERTS" '
     select(type == "object") | select(.rule.level >= '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
@@ -125,3 +92,6 @@ echo "MIME-Version: 1.0"
 echo "Content-Type: text/html; charset=UTF-8"
 cat "$REPORT_FILE"
 ) | sendmail -f "$MAIL_FROM" "$MAIL_TO"
+
+# Clean up temporary alerts file
+rm -f "$TEMP_ALERTS"
