@@ -19,7 +19,7 @@ Bash script that sends a daily report email to admins, providing an overview of 
 
 ---
 
-## 📥 Installation
+## Installation
 ### **Run the installer**
 ```bash
 wget https://raw.githubusercontent.com/mootzen/wazuhMailReport/main/install.sh
