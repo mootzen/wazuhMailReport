@@ -62,7 +62,7 @@ crontab -e
 
 ## Usage
 
-### The script runs automatically via the cron job, but you can manually trigger it with:
+### The script runs automatically via cron job, but you can manually trigger it with:
 
 ```bash
 /usr/local/wazuhMailReport/wazuh_alert_report.sh
