@@ -3,17 +3,16 @@ Bash script that sends a daily report email to admins, providing an overview of 
 
 > **⚠️ WARNING:** Still under development, use with caution!
 
-## 🚀 Features
+## Features
 - 📊 Extracts alerts from Wazuh logs (`alerts.json`)
 - 🚨 Filters alerts by severity level (configurable)
 - 💾 Includes system information (disk & swap usage)
 - 📩 Sends an HTML-formatted report via email
-- 🔄 Retries failed log reads to handle permission issues
-- 🛠️ Easy installation via an installer script
+- 🛠️ Easy installation via installer script
 
 ---
 
-## 📌 Requirements
+## Requirements
 - Running Wazuh instance (not tested in Docker)
 - `jq` and `mailutils`
 - A working mail server (e.g., Postfix)
@@ -33,7 +32,7 @@ The installer will:
 - Set up a cron job to run the report daily at midnight
 - Ensure correct file permissions
 
-## ⚙️ Configuration
+## Configuration
 
 ### To customize the script, modify the variables at the top of wazuh_alert_report.sh:
 ```
@@ -44,7 +43,7 @@ TIME_PERIOD="24 hours"     # Time range for logs
 TOP_ALERTS_COUNT=10        # Number of top alerts to display
 ```
 
-## 🛠️ Manual Execution
+## Manual Execution
 
 ### To test the report manually, run:
 
@@ -52,16 +51,16 @@ TOP_ALERTS_COUNT=10        # Number of top alerts to display
 /usr/local/wazuhMailReport/wazuh_alert_report.sh
 ```
 
-## ⏰ Scheduled Execution (Cron)
+## Scheduled Execution (Cron)
 ```bash
 crontab -e
 ```
 ### Run daily at 10 AM:
 ```
-0 10 * * * /usr/local/bin/report.sh
+0 10 * * * bash /usr/local/bin/report.sh
 ```
 
-## 📌 Usage
+## Usage
 
 ### The script runs automatically via the cron job, but you can manually trigger it with:
 
@@ -74,7 +73,7 @@ crontab -e
 cat /var/ossec/logs/alerts/jq_errors.log
 ```
 
-## 🔄 Updating
+## Updating
 
 ### Update to the latest version:
 
@@ -83,7 +82,7 @@ cd /usr/local/wazuhMailReport
 git pull
 ```
 
-## ❌ Uninstallation
+## Uninstallation
 
 ### Remove the script:
 ``` bash
