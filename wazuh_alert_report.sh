@@ -10,7 +10,7 @@ else
 fi
 
 # Calculate the time since set Time-Period (for filtering)
-START_TIME=$(date --date="$TIME_PERIOD ago" --utc +%Y-%m-%dT%H:%M:%SZ)
+START_TIME=$(date --utc --date="24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
 
 # Define output directory
 OUTPUT_DIR="/var/ossec/logs/reports"
@@ -19,15 +19,24 @@ mkdir -p "$OUTPUT_DIR"
 # Define output file (HTML format)
 REPORT_FILE="$OUTPUT_DIR/daily_wazuh_report.html"
 
-# Determine previous day's log file
-YESTERDAY=$(date --date="yesterday" +%Y%m%d)
-PREV_LOG="/var/ossec/logs/alerts/alerts-$YESTERDAY.json"
+YESTERDAY=$(date --date="yesterday" +%d)
+LOG_DIR="/var/ossec/logs/alerts/$(date +%Y/%b)"  # Adjusted for year/month format
+PREV_LOG="$LOG_DIR/ossec-alerts-$YESTERDAY.json"
+PREV_LOG_GZ="$PREV_LOG.gz"
 
 # Copy and merge log files to avoid read conflicts
 cp /var/ossec/logs/alerts/alerts.json /tmp/alerts.json 2>/dev/null
-if [[ -f "$PREV_LOG" ]]; then
-    jq -s 'add' /tmp/alerts.json "$PREV_LOG" > /tmp/alerts_combined.json
+
+if [[ -f "$PREV_LOG_GZ" ]]; then
+    echo "Extracting previous day's alerts from $PREV_LOG_GZ" >> /tmp/debug.log
+    gunzip -c "$PREV_LOG_GZ" > /tmp/prev_alerts.json
+    jq -s 'add | sort_by(.timestamp)' /tmp/alerts.json /tmp/prev_alerts.json > /tmp/alerts_combined.json
+    rm -f /tmp/prev_alerts.json  # Cleanup extracted file
+elif [[ -f "$PREV_LOG" ]]; then
+    echo "Using uncompressed previous day's alerts from $PREV_LOG" >> /tmp/debug.log
+    jq -s 'add | sort_by(.timestamp)' /tmp/alerts.json "$PREV_LOG" > /tmp/alerts_combined.json
 else
+    echo "No alerts found for yesterday" >> /tmp/debug.log
     cp /tmp/alerts.json /tmp/alerts_combined.json
 fi
 
