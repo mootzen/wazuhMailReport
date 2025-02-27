@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Load config file
+# Load config file x
 CONFIG_FILE="/usr/local/wazuhMailReport/report.conf"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
