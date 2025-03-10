@@ -60,7 +60,7 @@ fi
 
 # HTML report header
 echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
-echo "<h2 style='color:blue;'>🔹 Daily Wazuh Report - $(date) 🔹</h2>" >> "$REPORT_FILE"
+echo "<h2 style='color:blue;'>🔹 Daily Wazuh Report - $(date) </h2>" >> "$REPORT_FILE"
 echo "<p>Hello Team,</p><p>Here's the daily Wazuh alert summary:</p>" >> "$REPORT_FILE"
 
 # jq function
