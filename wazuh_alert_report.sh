@@ -81,15 +81,23 @@ echo "</table>" >> "$REPORT_FILE"
 # Alerts Directory Breakdown
 echo "<h3>📂 Alerts Directory Usage</h3>" >> "$REPORT_FILE"
 
-# Calculate total size of the alerts directory
-TOTAL_ALERTS_SIZE=$(du -sb /var/ossec/logs/alerts | awk '{print $1}')  # Size in bytes
+# Get total size of the alerts directory (in bytes)
+TOTAL_ALERTS_SIZE=$(du -sb /var/ossec/logs/alerts | awk '{print $1}')
 
-# Calculate sizes for relevant subdirectories and files (excluding jq and jq_errors.log)
+# Get sizes of subdirectories
 ALERT_ITEMS=()
 while read -r size path; do
-    [[ "$path" =~ jq$|jq_errors.log$ ]] && continue  # Skip irrelevant files
+    [[ "$path" =~ jq$|jq_errors.log$ ]] && continue  # Exclude jq and jq_errors.log
     ALERT_ITEMS+=("$size $path")
-done < <(du -sb /var/ossec/logs/alerts/* /var/ossec/logs/alerts/alerts.json /var/ossec/logs/alerts/alerts.log 2>/dev/null | sort -nr)
+done < <(du -sb /var/ossec/logs/alerts/* 2>/dev/null | sort -nr)
+
+# Get sizes of alerts.json and alerts.log separately (since du doesn't work well on them)
+for file in /var/ossec/logs/alerts/alerts.json /var/ossec/logs/alerts/alerts.log; do
+    if [[ -f "$file" ]]; then
+        FILE_SIZE=$(stat -c %s "$file")  # Get file size in bytes
+        ALERT_ITEMS+=("$FILE_SIZE $file")
+    fi
+done
 
 # Print total size
 echo "<p>Total size: <b>$(numfmt --to=iec-i --suffix=B $TOTAL_ALERTS_SIZE)</b></p>" >> "$REPORT_FILE"
