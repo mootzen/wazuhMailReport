@@ -61,12 +61,37 @@ fi
 # HTML report header
 echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
 echo "<h2 style='color:blue;'>🔹 Daily Wazuh Report - $(date) </h2>" >> "$REPORT_FILE"
-echo "<p>Hello Team,</p><p>Here's the daily Wazuh alert summary:</p>" >> "$REPORT_FILE"
+echo "<p>Hello Team,</p><p>Here's your daily Wazuh alert summary:</p>" >> "$REPORT_FILE"
 
 # jq function
 jq_safe() {
     jq -r "$2" "$1" 2>/dev/null
 }
+
+# System Updates Check
+echo "<h3>🔄 System Updates Status</h3>" >> "$REPORT_FILE"
+
+# Check Ubuntu updates
+UBUNTU_UPDATES=$(apt list --upgradable 2>/dev/null | grep -v "Listing..." | wc -l)
+if [[ "$UBUNTU_UPDATES" -gt 0 ]]; then
+    echo "<p>🔴 <b>Ubuntu:</b> $UBUNTU_UPDATES updates available.</p>" >> "$REPORT_FILE"
+else
+    echo "<p>✅ <b>Ubuntu:</b> System is up to date.</p>" >> "$REPORT_FILE"
+fi
+
+# Check installed Wazuh version
+INSTALLED_WAZUH_VERSION=$(dpkg-query -W -f='${Version}\n' wazuh-manager 2>/dev/null | cut -d '-' -f1)
+
+# Get latest Wazuh version from the official repo
+LATEST_WAZUH_VERSION=$(curl -s https://packages.wazuh.com/apt/dists/stable/main/binary-amd64/Packages.gz | gunzip | grep -A1 "Package: wazuh-manager" | grep "Version:" | awk '{print $2}' | cut -d '-' -f1)
+
+if [[ -z "$LATEST_WAZUH_VERSION" ]]; then
+    echo "<p>⚠️ <b>Wazuh:</b> Could not fetch the latest version info.</p>" >> "$REPORT_FILE"
+elif [[ "$INSTALLED_WAZUH_VERSION" == "$LATEST_WAZUH_VERSION" ]]; then
+    echo "<p>✅ <b>Wazuh:</b> Version $INSTALLED_WAZUH_VERSION is up to date.</p>" >> "$REPORT_FILE"
+else
+    echo "<p>🔴 <b>Wazuh:</b> Update available! Installed: $INSTALLED_WAZUH_VERSION → Latest: $LATEST_WAZUH_VERSION</p>" >> "$REPORT_FILE"
+fi
 
 # Debug: Check logs before filtering
 jq '.timestamp' /tmp/alerts_combined.json | head -n 10 >> /tmp/debug.log
