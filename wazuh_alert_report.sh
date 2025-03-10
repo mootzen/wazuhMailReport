@@ -102,7 +102,7 @@ else
     echo "$CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
 fi
-echo "<p>This is an automatically generated report. If you encounter any issues, please report them on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub Issues</a>.</p>" >> "$REPORT_FILE"
+echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically generated report. If you encounter any issues, please report them on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub Issues</a>.</p>" >> "$REPORT_FILE"
 # Close HTML
 echo "</body></html>" >> "$REPORT_FILE"
 
