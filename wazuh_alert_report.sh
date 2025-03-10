@@ -71,6 +71,18 @@ jq_safe() {
 # Debug: Check logs before filtering
 jq '.timestamp' /tmp/alerts_combined.json | head -n 10 >> /tmp/debug.log
 
+# Disk & Swap Usage
+echo "<h3>💾 Disk Usage</h3>" >> "$REPORT_FILE"
+echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
+echo "<tr><th>Filesystem</th><th>Size</th><th>Used</th><th>Avail</th><th>Use%</th></tr>" >> "$REPORT_FILE"
+df -h | grep "/dev/mapper/ubuntu--vg-ubuntu--lv" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"$4"</td><td>"$5"</td></tr>"}' >> "$REPORT_FILE"
+echo "</table>" >> "$REPORT_FILE"
+
+echo "<h3>🔄 Swap Usage</h3>" >> "$REPORT_FILE"
+echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Total</th><th>Used</th><th>Free</th></tr>" >> "$REPORT_FILE"
+free -h | grep "Swap" | awk '{print "<tr><td>"$2"</td><td>"$3"</td><td>"$4"</td></tr>"}' >> "$REPORT_FILE"
+echo "</table>" >> "$REPORT_FILE"
+
 # Non-Critical Alerts
 NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
     select(type == "object") | select(.rule.level < '$LEVEL' and .timestamp >= "'$START_TIME'") |
