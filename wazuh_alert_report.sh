@@ -80,8 +80,18 @@ echo "</table>" >> "$REPORT_FILE"
 
 # Alerts Directory Breakdown
 echo "<h3>📂 Alerts Directory Usage</h3>" >> "$REPORT_FILE"
+
+# Calculate total size of the alerts directory
 TOTAL_ALERTS_SIZE=$(du -sb /var/ossec/logs/alerts | awk '{print $1}')  # Size in bytes
 
+# Calculate sizes for relevant subdirectories and files (excluding jq and jq_errors.log)
+ALERT_ITEMS=()
+while read -r size path; do
+    [[ "$path" =~ jq$|jq_errors.log$ ]] && continue  # Skip irrelevant files
+    ALERT_ITEMS+=("$size $path")
+done < <(du -sb /var/ossec/logs/alerts/* /var/ossec/logs/alerts/alerts.json /var/ossec/logs/alerts/alerts.log 2>/dev/null | sort -nr)
+
+# Print total size
 echo "<p>Total size: <b>$(numfmt --to=iec-i --suffix=B $TOTAL_ALERTS_SIZE)</b></p>" >> "$REPORT_FILE"
 
 echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
@@ -94,17 +104,14 @@ calculate_percentage() {
     awk "BEGIN {printf \"%.2f%%\", ($size / $total) * 100}"
 }
 
-# Get sizes of relevant files & directories (excluding jq and jq_errors.log)
-while read -r line; do
-    ITEM_SIZE=$(echo "$line" | awk '{print $1}')
-    ITEM_PATH=$(echo "$line" | awk '{$1=""; print $0}' | sed 's/^ *//')
-    
-    # Skip jq and jq_errors.log
-    [[ "$ITEM_PATH" =~ jq$|jq_errors.log$ ]] && continue
-    
+# Process the collected data
+for entry in "${ALERT_ITEMS[@]}"; do
+    ITEM_SIZE=$(echo "$entry" | awk '{print $1}')
+    ITEM_PATH=$(echo "$entry" | awk '{$1=""; print $0}' | sed 's/^ *//')
+
     ITEM_PERCENT=$(calculate_percentage "$ITEM_SIZE" "$TOTAL_ALERTS_SIZE")
     echo "<tr><td>$ITEM_PATH</td><td>$(numfmt --to=iec-i --suffix=B $ITEM_SIZE)</td><td>$ITEM_PERCENT</td></tr>" >> "$REPORT_FILE"
-done < <(du -sb /var/ossec/logs/alerts/* /var/ossec/logs/alerts/alerts.json /var/ossec/logs/alerts/alerts.log 2>/dev/null | sort -nr)
+done
 
 echo "</table>" >> "$REPORT_FILE"
 
