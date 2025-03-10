@@ -79,13 +79,13 @@ else
     echo "<p>✅ <b>Ubuntu:</b> System is up to date.</p>" >> "$REPORT_FILE"
 fi
 
-# Check installed Wazuh version
+# Get installed Wazuh version
 INSTALLED_WAZUH_VERSION=$(dpkg-query -W -f='${Version}\n' wazuh-manager 2>/dev/null | cut -d '-' -f1)
 
-# Get latest Wazuh version from the official repo
-LATEST_WAZUH_VERSION=$(curl -s https://packages.wazuh.com/apt/dists/stable/main/binary-amd64/Packages.gz | gunzip | grep -A1 "Package: wazuh-manager" | grep "Version:" | awk '{print $2}' | cut -d '-' -f1)
+# Fetch latest Wazuh version from the official API
+LATEST_WAZUH_VERSION=$(curl -s https://api.github.com/repos/wazuh/wazuh/releases/latest | jq -r '.tag_name' | sed 's/^v//')
 
-if [[ -z "$LATEST_WAZUH_VERSION" ]]; then
+if [[ -z "$LATEST_WAZUH_VERSION" || "$LATEST_WAZUH_VERSION" == "null" ]]; then
     echo "<p>⚠️ <b>Wazuh:</b> Could not fetch the latest version info.</p>" >> "$REPORT_FILE"
 elif [[ "$INSTALLED_WAZUH_VERSION" == "$LATEST_WAZUH_VERSION" ]]; then
     echo "<p>✅ <b>Wazuh:</b> Version $INSTALLED_WAZUH_VERSION is up to date.</p>" >> "$REPORT_FILE"
