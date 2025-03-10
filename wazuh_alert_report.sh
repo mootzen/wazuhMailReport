@@ -72,7 +72,7 @@ jq_safe() {
 echo "<h3>🔄 System Updates Status</h3>" >> "$REPORT_FILE"
 
 # Check Ubuntu updates
-UBUNTU_UPDATES=$(apt list --upgradable 2>/dev/null | grep -v "Listing..." | wc -l)
+UBUNTU_UPDATES=$(apt list --upgradable 2>/dev/null | grep -v "Listing..." | wc -l) # Ensure your system locale is set to english, otherwise this might generate false-positives
 if [[ "$UBUNTU_UPDATES" -gt 0 ]]; then
     echo "<p>🔴 <b>Ubuntu:</b> $UBUNTU_UPDATES updates available.</p>" >> "$REPORT_FILE"
 else
