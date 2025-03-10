@@ -71,17 +71,35 @@ jq_safe() {
 # Debug: Check logs before filtering
 jq '.timestamp' /tmp/alerts_combined.json | head -n 10 >> /tmp/debug.log
 
-# Disk & Swap Usage
+# Disk Usage Overview
 echo "<h3>💾 Disk Usage</h3>" >> "$REPORT_FILE"
 echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
 echo "<tr><th>Filesystem</th><th>Size</th><th>Used</th><th>Avail</th><th>Use%</th></tr>" >> "$REPORT_FILE"
-
-# Root volume usage
 df -h | grep "/dev/mapper/ubuntu--vg-ubuntu--lv" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"$4"</td><td>"$5"</td></tr>"}' >> "$REPORT_FILE"
+echo "</table>" >> "$REPORT_FILE"
 
-# Alerts directory usage
-ALERTS_USAGE=$(du -sh /var/ossec/logs/alerts | awk '{print "<tr><td>/var/ossec/logs/alerts</td><td>N/A</td><td>"$1"</td><td>N/A</td><td>N/A</td></tr>"}')
-echo "$ALERTS_USAGE" >> "$REPORT_FILE"
+# Alerts Directory Breakdown
+echo "<h3>📂 Alerts Directory Usage</h3>" >> "$REPORT_FILE"
+echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
+echo "<tr><th>Path</th><th>Size</th><th>Usage %</th></tr>" >> "$REPORT_FILE"
+
+# Get total size of /var/ossec/logs/alerts
+TOTAL_ALERTS_SIZE=$(du -sb /var/ossec/logs/alerts | awk '{print $1}')  # Size in bytes
+
+# Function to calculate percentage
+calculate_percentage() {
+    local size=$1
+    local total=$2
+    awk "BEGIN {printf \"%.2f%%\", ($size / $total) * 100}"
+}
+
+# List all files and directories inside /var/ossec/logs/alerts
+while read -r line; do
+    ITEM_SIZE=$(echo "$line" | awk '{print $1}')
+    ITEM_PATH=$(echo "$line" | awk '{$1=""; print $0}' | sed 's/^ *//')
+    ITEM_PERCENT=$(calculate_percentage "$ITEM_SIZE" "$TOTAL_ALERTS_SIZE")
+    echo "<tr><td>$ITEM_PATH</td><td>$(numfmt --to=iec-i --suffix=B $ITEM_SIZE)</td><td>$ITEM_PERCENT</td></tr>" >> "$REPORT_FILE"
+done < <(du -sb /var/ossec/logs/alerts/* | sort -nr)  
 
 echo "</table>" >> "$REPORT_FILE"
 
