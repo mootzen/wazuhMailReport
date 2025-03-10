@@ -75,7 +75,14 @@ jq '.timestamp' /tmp/alerts_combined.json | head -n 10 >> /tmp/debug.log
 echo "<h3>💾 Disk Usage</h3>" >> "$REPORT_FILE"
 echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
 echo "<tr><th>Filesystem</th><th>Size</th><th>Used</th><th>Avail</th><th>Use%</th></tr>" >> "$REPORT_FILE"
+
+# Root volume usage
 df -h | grep "/dev/mapper/ubuntu--vg-ubuntu--lv" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"$4"</td><td>"$5"</td></tr>"}' >> "$REPORT_FILE"
+
+# Alerts directory usage
+ALERTS_USAGE=$(du -sh /var/ossec/logs/alerts | awk '{print "<tr><td>/var/ossec/logs/alerts</td><td>N/A</td><td>"$1"</td><td>N/A</td><td>N/A</td></tr>"}')
+echo "$ALERTS_USAGE" >> "$REPORT_FILE"
+
 echo "</table>" >> "$REPORT_FILE"
 
 echo "<h3>🔄 Swap Usage</h3>" >> "$REPORT_FILE"
