@@ -271,9 +271,8 @@ tmp_files=("/tmp/alerts_combined.json" "/tmp/alerts_combined_final.json")
 for file in "${tmp_files[@]}"; do
     [[ -f "$file" ]] && rm "$file"
 done
-
-# Remove the named pipe
 rm -f /tmp/alerts_combined.json
+rm -f /tmp/alerts_combined_final.json
 swapoff -a; swapon -a
 echo "Memory usage after cleanup:"
 free -h
