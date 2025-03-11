@@ -61,25 +61,27 @@ mkfifo /tmp/alerts_combined.json
 echo "Memory usage after creating named pipe:"
 free -h
 
-# Extract and merge logs
+# Extract and merge logs using jq streaming
 if [[ -f "$PREV_LOG_GZ" ]]; then
     echo "Extracting previous day's alerts from $PREV_LOG_GZ" >> /tmp/debug.log
-    gunzip -c "$PREV_LOG_GZ" > /tmp/prev_alerts.json
-    jq -s 'add' /var/ossec/logs/alerts/alerts.json /tmp/prev_alerts.json > /tmp/alerts_combined.json &
-    rm -f /tmp/prev_alerts.json  # Cleanup
+    gunzip -c "$PREV_LOG_GZ" | jq -c '. |= select(.timestamp >= "'$START_TIME'")' >> /tmp/alerts_combined.json &
 elif [[ -f "$PREV_LOG" ]]; then
     echo "Using uncompressed previous day's alerts from $PREV_LOG" >> /tmp/debug.log
-    jq -s 'add' /var/ossec/logs/alerts/alerts.json "$PREV_LOG" > /tmp/alerts_combined.json &
+    jq -c '. |= select(.timestamp >= "'$START_TIME'")' "$PREV_LOG" >> /tmp/alerts_combined.json &
 else
     echo "No previous alerts found. Using only current logs." >> /tmp/debug.log
-    cat /var/ossec/logs/alerts/alerts.json > /tmp/alerts_combined.json &
+    jq -c '. |= select(.timestamp >= "'$START_TIME'")' /var/ossec/logs/alerts/alerts.json >> /tmp/alerts_combined.json &
 fi
 
+# Process the combined JSON stream
+jq -s '.' /tmp/alerts_combined.json > /tmp/alerts_combined_final.json
+
+# Use /tmp/alerts_combined_final.json for further processing
 echo "Memory usage after merging logs:"
 free -h
 
 # Debug: Check if the merged file contains data
-if [[ ! -s /tmp/alerts_combined.json ]]; then
+if [[ ! -s /tmp/alerts_combined_final.json ]]; then
     echo "Error: Merged log file is empty!" >> /tmp/debug.log
 else
     echo "Success: Merged log file contains data." >> /tmp/debug.log
@@ -205,7 +207,7 @@ echo "Memory usage after checking swap usage:"
 free -h
 
 # Non-Critical Alerts
-NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
+NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
     select(type == "object") | select(.rule.level < '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
@@ -224,7 +226,7 @@ echo "Memory usage after processing non-critical alerts:"
 free -h
 
 # Critical Alerts
-CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
+CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
     select(type == "object") | select(.rule.level >= '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
@@ -258,7 +260,7 @@ echo "Memory usage after sending email:"
 free -h
 
 # Cleanup
-tmp_files=("/tmp/alerts.json" "/tmp/alerts_combined.json")
+tmp_files=("/tmp/alerts.json" "/tmp/alerts_combined_final.json")
 for file in "${tmp_files[@]}"; do
     [[ -f "$file" ]] && rm "$file"
 done
