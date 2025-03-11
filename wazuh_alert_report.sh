@@ -43,7 +43,7 @@ free -h
 REPORT_FILE="\$OUTPUT_DIR/daily_wazuh_report.html"
 
 # Determine yesterday’s log filename
-YESTERDAY=\$(date --date="yesterday" +%d)
+YESTERDAY=$(date --date="yesterday" +%d)
 LOG_DIR="/var/ossec/logs/alerts/\$(date +%Y/%b)"  # Ensure this format matches your filesystem
 PREV_LOG="\$LOG_DIR/ossec-alerts-\$YESTERDAY.json"
 PREV_LOG_GZ="\$PREV_LOG.gz"
