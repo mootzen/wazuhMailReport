@@ -1,8 +1,13 @@
 #!/bin/bash
-
+echo "Current working directory: $(pwd)"
 # Load config file
 CONFIG_FILE="/usr/local/wazuhMailReport/report.conf"
-echo "Config file path: $CONFIG_FILE"
+if [[ -f "$CONFIG_FILE" ]]; then
+    echo "Config file found at $CONFIG_FILE."
+else
+    echo "Config file not found at $CONFIG_FILE."
+fi
+
 if [[ -f "\$CONFIG_FILE" ]]; then
     source "\$CONFIG_FILE"
 else
