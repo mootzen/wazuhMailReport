@@ -98,9 +98,9 @@ echo "<p>Hello Team,</p><p>Here's your daily Wazuh alert summary:</p>" >> "$REPO
 echo "Memory usage after writing HTML report header:"
 free -h
 
-# jq function
+# jq function with streaming
 jq_safe() {
-    jq -r "$2" "$1" 2>/dev/null
+    jq -c -r "$2" "$1" 2>/dev/null
 }
 
 # System Updates Check
@@ -211,6 +211,7 @@ NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
     select(type == "object") | select(.rule.level < '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
+
 
 if [[ -z "$NON_CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No non-critical alerts found.</p>" >> "$REPORT_FILE"
