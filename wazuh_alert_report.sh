@@ -263,8 +263,8 @@ echo "Content-Type: text/html; charset=UTF-8"
 cat "$REPORT_FILE"
 ) | sendmail -f "$MAIL_FROM" "$MAIL_TO"
 
-echo "Memory usage after sending email:"
-free -h
+#echo "Memory usage after sending email:"
+#free -h
 
 # Cleanup
 tmp_files=("/tmp/alerts_combined.json" "/tmp/alerts_combined_final.json")
