@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# If execution was canceled previously there might be unfinished tmp files that have to be removed
+echo "Deleting existing tmp files..."
+tmp_files=("/tmp/alerts.json" "/tmp/alerts_combined_final.json")
+for file in "${tmp_files[@]}"; do
+    [[ -f "$file" ]] && rm "$file"
+done
+
 echo "Current working directory: $(pwd)"
 
 # Load config file
