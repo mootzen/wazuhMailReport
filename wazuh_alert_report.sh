@@ -30,7 +30,7 @@ echo "Memory usage after loading config:"
 free -h
 
 # Set time period
-START_TIME=\$(date --utc --date="24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
+START_TIME=$(date --utc --date="24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
 
 # Output directory
 OUTPUT_DIR="/var/ossec/logs/reports"
