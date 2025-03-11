@@ -2,7 +2,7 @@
 
 # If execution was canceled previously there might be unfinished tmp files that have to be removed
 echo "Deleting existing tmp files..."
-tmp_files=("/tmp/alerts.json" "/tmp/alerts_combined_final.json")
+tmp_files=("/tmp/alerts_combined.json" "/tmp/alerts_combined_final.json")
 for file in "${tmp_files[@]}"; do
     [[ -f "$file" ]] && rm "$file"
 done
@@ -31,8 +31,6 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
     exit 1
 fi
 
-echo "Script continues execution..."
-
 echo "Memory usage after loading config:"
 free -h
 
@@ -43,8 +41,8 @@ START_TIME=$(date --utc --date="24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
 OUTPUT_DIR="/var/ossec/logs/reports"
 mkdir -p "$OUTPUT_DIR"
 
-echo "Memory usage after setting time period and output directory:"
-free -h
+#echo "Memory usage after setting time period and output directory:"
+#free -h
 
 # Output file
 REPORT_FILE="$OUTPUT_DIR/daily_wazuh_report.html"
@@ -59,15 +57,15 @@ echo "Debug: Searching for logs in $LOG_DIR" > /tmp/debug.log
 echo "Debug: Expected yesterday's log: $PREV_LOG" >> /tmp/debug.log
 echo "Debug: Expected yesterday's log (gz): $PREV_LOG_GZ" >> /tmp/debug.log
 
-echo "Memory usage after determining log filenames:"
-free -h
+#echo "Memory usage after determining log filenames:"
+#free -h
 
 # Use a named pipe for streaming JSON data
 mkfifo /tmp/alerts_combined.json
 
-echo "Memory usage after creating named pipe:"
-free -h
-
+#echo "Memory usage after creating named pipe:"
+#free -h
+echo "Extracting and merging logs using jq streaming, this may take a while..."
 # Extract and merge logs using jq streaming
 if [[ -f "$PREV_LOG_GZ" ]]; then
     echo "Extracting previous day's alerts from $PREV_LOG_GZ" >> /tmp/debug.log
@@ -94,16 +92,16 @@ else
     echo "Success: Merged log file contains data." >> /tmp/debug.log
 fi
 
-echo "Memory usage after checking merged file:"
-free -h
+#echo "Memory usage after checking merged file:"
+#free -h
 
 # HTML report header
 echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
 echo "<h2 style='color:blue;'>🔹 Daily Wazuh Report - $(date) </h2>" >> "$REPORT_FILE"
 echo "<p>Hello Team,</p><p>Here's your daily Wazuh alert summary:</p>" >> "$REPORT_FILE"
 
-echo "Memory usage after writing HTML report header:"
-free -h
+#echo "Memory usage after writing HTML report header:"
+#free -h
 
 # jq function with streaming
 jq_safe() {
@@ -121,8 +119,8 @@ else
     echo "<p>✅ <b>Ubuntu:</b> System is up to date.</p>" >> "$REPORT_FILE"
 fi
 
-echo "Memory usage after checking system updates:"
-free -h
+#echo "Memory usage after checking system updates:"
+#free -h
 
 # Get installed Wazuh version
 INSTALLED_WAZUH_VERSION=$(dpkg-query -W -f='${Version}\n' wazuh-manager 2>/dev/null | cut -d '-' -f1)
@@ -139,14 +137,14 @@ else
     echo "<p>🔴 <b>Wazuh:</b> Update available! Installed: $INSTALLED_WAZUH_VERSION → Latest: $LATEST_WAZUH_VERSION</p>" >> "$REPORT_FILE"
 fi
 
-echo "Memory usage after checking Wazuh version:"
-free -h
+#echo "Memory usage after checking Wazuh version:"
+#free -h
 
 # Debug: Check logs before filtering
 jq '.timestamp' /tmp/alerts_combined.json | head -n 10 >> /tmp/debug.log
 
-echo "Memory usage after debugging log timestamps:"
-free -h
+#echo "Memory usage after debugging log timestamps:"
+#free -h
 
 # Disk Usage Overview
 echo "<h3>💾 Disk Usage</h3>" >> "$REPORT_FILE"
@@ -155,8 +153,8 @@ echo "<tr><th>Filesystem</th><th>Size</th><th>Used</th><th>Avail</th><th>Use%</t
 df -h | grep "/dev/mapper/ubuntu--vg-ubuntu--lv" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"$4"</td><td>"$5"</td></tr>"}' >> "$REPORT_FILE"
 echo "</table>" >> "$REPORT_FILE"
 
-echo "Memory usage after checking disk usage:"
-free -h
+#echo "Memory usage after checking disk usage:"
+#free -h
 
 # Alerts Directory Breakdown
 echo "<h3>📂 Alerts Directory Usage</h3>" >> "$REPORT_FILE"
@@ -203,16 +201,16 @@ done
 
 echo "</table>" >> "$REPORT_FILE"
 
-echo "Memory usage after alerts directory breakdown:"
-free -h
+#echo "Memory usage after alerts directory breakdown:"
+#free -h
 
 echo "<h3>🔄 Swap Usage</h3>" >> "$REPORT_FILE"
 echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Total</th><th>Used</th><th>Free</th></tr>" >> "$REPORT_FILE"
 free -h | grep "Swap" | awk '{print "<tr><td>"$2"</td><td>"$3"</td><td>"$4"</td></tr>"}' >> "$REPORT_FILE"
 echo "</table>" >> "$REPORT_FILE"
 
-echo "Memory usage after checking swap usage:"
-free -h
+#echo "Memory usage after checking swap usage:"
+#free -h
 
 # Non-Critical Alerts
 NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
@@ -231,8 +229,8 @@ else
     echo "</table>" >> "$REPORT_FILE"
 fi
 
-echo "Memory usage after processing non-critical alerts:"
-free -h
+#echo "Memory usage after processing non-critical alerts:"
+#free -h
 
 # Critical Alerts
 CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
@@ -269,7 +267,7 @@ echo "Memory usage after sending email:"
 free -h
 
 # Cleanup
-tmp_files=("/tmp/alerts.json" "/tmp/alerts_combined_final.json")
+tmp_files=("/tmp/alerts_combined.json" "/tmp/alerts_combined_final.json")
 for file in "${tmp_files[@]}"; do
     [[ -f "$file" ]] && rm "$file"
 done
