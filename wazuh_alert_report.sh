@@ -15,13 +15,16 @@ else
     exit 1
 fi
 
+# Add debug statements before the error message
+echo "Debug: CONFIG_FILE is set to $CONFIG_FILE"
 
-if [[ -f "\$CONFIG_FILE" ]]; then
-    source "\$CONFIG_FILE"
-else
-    echo "Error: Config file not found at \$CONFIG_FILE"
+# Example of where the error might be triggered again
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo "Error: Config file not found at $CONFIG_FILE"
     exit 1
 fi
+
+echo "Script continues execution..."
 
 echo "Memory usage after loading config:"
 free -h
