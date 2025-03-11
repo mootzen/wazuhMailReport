@@ -2,6 +2,7 @@
 
 # Load config file
 CONFIG_FILE="/usr/local/wazuhMailReport/report.conf"
+echo "Config file path: $CONFIG_FILE"
 if [[ -f "\$CONFIG_FILE" ]]; then
     source "\$CONFIG_FILE"
 else
