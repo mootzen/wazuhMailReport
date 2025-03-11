@@ -265,6 +265,6 @@ done
 
 # Remove the named pipe
 rm -f /tmp/alerts_combined.json
-
+swapoff -a; swapon -a
 echo "Memory usage after cleanup:"
 free -h
