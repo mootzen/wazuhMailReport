@@ -208,9 +208,9 @@ echo "<h3>🔄 Swap Usage</h3>" >> "$REPORT_FILE"
 echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Total</th><th>Used</th><th>Free</th></tr>" >> "$REPORT_FILE"
 free -h | grep "Swap" | awk '{print "<tr><td>"$2"</td><td>"$3"</td><td>"$4"</td></tr>"}' >> "$REPORT_FILE"
 echo "</table>" >> "$REPORT_FILE"
-
-#echo "Memory usage after checking swap usage:"
-#free -h
+# Debug: Check the contents of the merged JSON file
+echo "Debug: First 10 lines of merged JSON file:" >> /tmp/debug.log
+head -n 10 /tmp/alerts_combined_final.json >> /tmp/debug.log
 
 # Non-Critical Alerts
 NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
@@ -218,6 +218,9 @@ NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
 
+# Debug: Print non-critical alerts
+echo "Debug: Non-Critical Alerts:" >> /tmp/debug.log
+echo "$NON_CRITICAL_ALERTS" >> /tmp/debug.log
 
 if [[ -z "$NON_CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No non-critical alerts found.</p>" >> "$REPORT_FILE"
@@ -229,14 +232,15 @@ else
     echo "</table>" >> "$REPORT_FILE"
 fi
 
-#echo "Memory usage after processing non-critical alerts:"
-#free -h
-
 # Critical Alerts
 CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
     select(type == "object") | select(.rule.level >= '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
+
+# Debug: Print critical alerts
+echo "Debug: Critical Alerts:" >> /tmp/debug.log
+echo "$CRITICAL_ALERTS" >> /tmp/debug.log
 
 if [[ -z "$CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No critical alerts found.</p>" >> "$REPORT_FILE"
