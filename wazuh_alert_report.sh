@@ -71,9 +71,6 @@ echo "Debug: Expected yesterday's log (gz): $PREV_LOG_GZ" >> /tmp/debug.log
 
 # Use a named pipe for streaming JSON data
 mkfifo /tmp/alerts_combined.json
-
-#echo "Memory usage after creating named pipe:"
-#free -h
 echo "Extracting and merging logs using jq streaming, this may take a while..."
 # Extract and merge logs using jq streaming
 if [[ -f "$PREV_LOG_GZ" ]]; then
@@ -90,10 +87,6 @@ fi
 # Process the combined JSON stream
 jq -s '.' /tmp/alerts_combined.json > /tmp/alerts_combined_final.json
 
-# Use /tmp/alerts_combined_final.json for further processing
-echo "Memory usage after merging logs:"
-free -h
-
 # Debug: Check if the merged file contains data
 if [[ ! -s /tmp/alerts_combined_final.json ]]; then
     echo "Error: Merged log file is empty!" >> /tmp/debug.log
@@ -101,16 +94,10 @@ else
     echo "Success: Merged log file contains data." >> /tmp/debug.log
 fi
 
-#echo "Memory usage after checking merged file:"
-#free -h
-
 # HTML report header
 echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
 echo "<h2 style='color:blue;'>🔹 Daily Wazuh Report - $(date) </h2>" >> "$REPORT_FILE"
 echo "<p>Hello Team,</p><p>Here's your daily Wazuh alert summary:</p>" >> "$REPORT_FILE"
-
-#echo "Memory usage after writing HTML report header:"
-#free -h
 
 # jq function with streaming
 jq_safe() {
@@ -128,9 +115,6 @@ else
     echo "<p>✅ <b>Ubuntu:</b> System is up to date.</p>" >> "$REPORT_FILE"
 fi
 
-#echo "Memory usage after checking system updates:"
-#free -h
-
 # Get installed Wazuh version
 INSTALLED_WAZUH_VERSION=$(dpkg-query -W -f='${Version}\n' wazuh-manager 2>/dev/null | cut -d '-' -f1)
 
@@ -146,14 +130,8 @@ else
     echo "<p>🔴 <b>Wazuh:</b> Update available! Installed: $INSTALLED_WAZUH_VERSION → Latest: $LATEST_WAZUH_VERSION</p>" >> "$REPORT_FILE"
 fi
 
-#echo "Memory usage after checking Wazuh version:"
-#free -h
-
 # Debug: Check logs before filtering
 jq '.timestamp' /tmp/alerts_combined.json | head -n 10 >> /tmp/debug.log
-
-#echo "Memory usage after debugging log timestamps:"
-#free -h
 
 # Disk Usage Overview
 echo "<h3>💾 Disk Usage</h3>" >> "$REPORT_FILE"
@@ -161,9 +139,6 @@ echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
 echo "<tr><th>Filesystem</th><th>Size</th><th>Used</th><th>Avail</th><th>Use%</th></tr>" >> "$REPORT_FILE"
 df -h | grep "/dev/mapper/ubuntu--vg-ubuntu--lv" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"$4"</td><td>"$5"</td></tr>"}' >> "$REPORT_FILE"
 echo "</table>" >> "$REPORT_FILE"
-
-#echo "Memory usage after checking disk usage:"
-#free -h
 
 # Alerts Directory Breakdown
 echo "<h3>📂 Alerts Directory Usage</h3>" >> "$REPORT_FILE"
@@ -209,9 +184,6 @@ for entry in "${ALERT_ITEMS[@]}"; do
 done
 
 echo "</table>" >> "$REPORT_FILE"
-
-#echo "Memory usage after alerts directory breakdown:"
-#free -h
 
 echo "<h3>🔄 Swap Usage</h3>" >> "$REPORT_FILE"
 echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Total</th><th>Used</th><th>Free</th></tr>" >> "$REPORT_FILE"
@@ -265,9 +237,6 @@ echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically gen
 # Close HTML
 echo "</body></html>" >> "$REPORT_FILE"
 
-echo "Memory usage after closing HTML report:"
-free -h
-
 # Send email
 (
 echo "Subject: $MAIL_SUBJECT"
@@ -275,9 +244,6 @@ echo "MIME-Version: 1.0"
 echo "Content-Type: text/html; charset=UTF-8"
 cat "$REPORT_FILE"
 ) | sendmail -f "$MAIL_FROM" "$MAIL_TO"
-
-#echo "Memory usage after sending email:"
-#free -h
 
 # Cleanup
 tmp_files=("/tmp/alerts_combined.json" "/tmp/alerts_combined_final.json")
@@ -287,5 +253,3 @@ done
 rm -f /tmp/alerts_combined.json
 rm -f /tmp/alerts_combined_final.json
 swapoff -a; swapon -a
-echo "Memory usage after cleanup:"
-free -h
