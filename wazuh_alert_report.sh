@@ -1,5 +1,14 @@
 #!/bin/bash
-
+ascii_art="
+                          _     __  __       _ _ ____                       _
+ __      ____ _ _____   _| |__ |  \/  | __ _(_) |  _ \ ___ _ __   ___  _ __| |_
+ \ \ /\ / / _\` |_  / | | | '_ \| |\/| |/ _\` | | | |_) / _ \ '_ \ / _ \| '__| __|
+  \ V  V / (_| |/ /| |_| | | | | |  | | (_| | | |  _ <  __/ |_) | (_) | |  | |_
+   \_/\_/ \__,_/___|\__,_|_| |_|_|  |_|\__,_|_|_|_| \_\___| .__/ \___/|_|   \__|
+                                                          |_|
+"
+VERSION="0.1"
+echo -e "$ascii_art"
 # If execution was canceled previously there might be unfinished tmp files that have to be removed
 echo "Deleting existing tmp files..."
 tmp_files=("/tmp/alerts_combined.json" "/tmp/alerts_combined_final.json")
