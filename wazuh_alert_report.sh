@@ -101,8 +101,10 @@ jq -s '.' /tmp/alerts_combined.json > /tmp/alerts_combined_final.json
 # Debug: Check if the merged file contains data
 if [[ ! -s /tmp/alerts_combined_final.json ]]; then
     echo "Error: Merged log file is empty!" >> /tmp/debug.log
+    echo "Error: Merged log file is empty!"
 else
     echo "Success: Merged log file contains data." >> /tmp/debug.log
+    echo "Success: Merged log file contains data."
 fi
 
 # HTML report header
