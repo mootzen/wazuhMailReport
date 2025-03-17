@@ -140,6 +140,7 @@ elif [[ "$INSTALLED_WAZUH_VERSION" == "$LATEST_WAZUH_VERSION" ]]; then
 else
     echo "<p>🔴 <b>Wazuh:</b> Update available! Installed: $INSTALLED_WAZUH_VERSION → Latest: $LATEST_WAZUH_VERSION</p>" >> "$REPORT_FILE"
 fi
+echo "Success! Latest Wazuh-version is $LATEST_WAZUH_VERSION"
 
 # Debug: Check logs before filtering
 jq '.timestamp' /tmp/alerts_combined.json | head -n 10 >> /tmp/debug.log
