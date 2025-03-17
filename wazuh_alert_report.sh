@@ -10,12 +10,22 @@ ascii_art="
 "
 VERSION="0.1"
 echo -e "$ascii_art"
+#Lockfile to prevent multiple instances running
+
+LOCKFILE="/tmp/wazuh_report.lock"
+
+if [ -e "$LOCKFILE" ]; then
+    echo "Another instance of the script is running. Exiting."
+    exit 1
+fi
+
+touch "$LOCKFILE"
+trap 'rm -f "$LOCKFILE"' EXIT
+
 # If execution was canceled previously there might be unfinished tmp files that have to be removed
 echo "Deleting existing tmp files..."
-tmp_files=("/tmp/alerts_combined.json" "/tmp/alerts_combined_final.json")
-for file in "${tmp_files[@]}"; do
-    [[ -f "$file" ]] && rm "$file"
-done
+[ -e "/tmp/alerts_combined.json" ] && rm -f /tmp/alerts_combined.json
+[ -e "/tmp/alerts_combined_final.json" ] && rm -f /tmp/alerts_combined_final.json
 
 echo "Current working directory: $(pwd)"
 
@@ -247,10 +257,8 @@ cat "$REPORT_FILE"
 ) | sendmail -f "$MAIL_FROM" "$MAIL_TO"
 
 # Cleanup
-tmp_files=("/tmp/alerts_combined.json" "/tmp/alerts_combined_final.json")
-for file in "${tmp_files[@]}"; do
-    [[ -f "$file" ]] && rm "$file"
-done
-rm -f /tmp/alerts_combined.json
-rm -f /tmp/alerts_combined_final.json
+cleanup() {
+    rm -f /tmp/alerts_combined.json /tmp/alerts_combined_final.json
+}
+trap cleanup EXIT
 swapoff -a; swapon -a
