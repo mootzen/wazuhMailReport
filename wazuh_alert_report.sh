@@ -62,13 +62,13 @@ echo "[$$] Extracting and merging logs using jq streaming..."
 # Extract and merge logs
 if [[ -f "$PREV_LOG_GZ" ]]; then
     echo "[$$] Extracting previous day's alerts from $PREV_LOG_GZ"
-    gunzip -c "$PREV_LOG_GZ" | jq -c '. |= select(.timestamp >= "'$START_TIME'")' 2>> /tmp/jq_errors.log > /tmp/alerts_combined.json
+    gunzip -c "$PREV_LOG_GZ" | jq -c '. |= select(.timestamp >= "'$START_TIME'")' 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
 elif [[ -f "$PREV_LOG" ]]; then
     echo "[$$] Using uncompressed previous day's alerts from $PREV_LOG"
-    jq -c '. |= select(.timestamp >= "'$START_TIME'")' "$PREV_LOG" 2>> /tmp/jq_errors.log > /tmp/alerts_combined.json
+    jq -c '. |= select(.timestamp >= "'$START_TIME'")' "$PREV_LOG" 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
 else
     echo "[$$] No previous alerts found. Using only current logs."
-    jq -c '. |= select(.timestamp >= "'$START_TIME'")' /var/ossec/logs/alerts/alerts.json 2>> /tmp/jq_errors.log > /tmp/alerts_combined.json
+    jq -c '. |= select(.timestamp >= "'$START_TIME'")' /var/ossec/logs/alerts/alerts.json 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
 fi
 
 # Wait a moment to ensure file is created
@@ -92,6 +92,10 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
+# Debug: Print first few lines of the merged JSON file
+echo "[$$] Debug: First 10 lines of merged JSON file:"
+head -n 10 /tmp/alerts_combined_final.json
+
 echo "[$$] Processing system updates check..."
 UBUNTU_UPDATES=$(apt list --upgradable 2>/dev/null | grep -v "Listing..." | wc -l)
 
@@ -108,6 +112,10 @@ df -h | grep "/dev/mapper/ubuntu--vg-ubuntu--lv"
 echo "[$$] Checking alerts directory usage..."
 du -sh /var/ossec/logs/alerts
 
+# Count total number of alerts for progress bar
+TOTAL_ALERTS=$(jq '. | length' /tmp/alerts_combined_final.json)
+echo "[$$] Total alerts to process: $TOTAL_ALERTS"
+
 echo "[$$] Extracting non-critical alerts..."
 NON_CRITICAL_ALERTS=$(jq -c '
     select(type == "object") | select(.rule.level < 7 and .timestamp >= "'$START_TIME'") |
@@ -119,6 +127,10 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
+# Debug: Print non-critical alerts
+#echo "[$$] Debug: Non-Critical Alerts:"
+#echo "$NON_CRITICAL_ALERTS"
+
 echo "[$$] Extracting critical alerts..."
 CRITICAL_ALERTS=$(jq -c '
     select(type == "object") | select(.rule.level >= 7 and .timestamp >= "'$START_TIME'") |
@@ -129,6 +141,10 @@ if [[ $? -ne 0 ]]; then
     echo "[$$] Error: jq failed to process critical alerts!"
     exit 1
 fi
+
+# Debug: Print critical alerts
+#echo "[$$] Debug: Critical Alerts:"
+#echo "$CRITICAL_ALERTS"
 
 # HTML report header
 echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
@@ -200,7 +216,7 @@ echo "</table>" >> "$REPORT_FILE"
 if [[ -z "$NON_CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No non-critical alerts found.</p>" >> "$REPORT_FILE"
 else
-    echo "<h3>⚠️ Top Non-Critical Alerts (Level < 13) from the last 24 hours</h3>" >> "$REPORT_FILE"
+    echo "<h3>⚠️ Top Non-Critical Alerts (Level < 7) from the last 24 hours</h3>" >> "$REPORT_FILE"
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
     echo "$NON_CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
@@ -210,7 +226,7 @@ fi
 if [[ -z "$CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No critical alerts found.</p>" >> "$REPORT_FILE"
 else
-    echo "<h3>🚨 Top Critical Alerts (Level ≥ 13) from the last 24 hours</h3>" >> "$REPORT_FILE"
+    echo "<h3>🚨 Top Critical Alerts (Level ≥ 7) from the last 24 hours</h3>" >> "$REPORT_FILE"
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
     echo "$CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
