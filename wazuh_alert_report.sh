@@ -86,17 +86,17 @@ echo "Extracting and merging logs using jq streaming, this may take a while..."
 # Extract and merge logs using jq streaming
 if [[ -f "$PREV_LOG_GZ" ]]; then
     echo "Extracting previous day's alerts from $PREV_LOG_GZ" >> /tmp/debug.log
-    gunzip -c "$PREV_LOG_GZ" | jq -c '. |= select(.timestamp >= "'$START_TIME'")' >> /tmp/alerts_combined.json &
+    gunzip -c "$PREV_LOG_GZ" | jq -c '. |= select(.timestamp >= "'$START_TIME'")' 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
 elif [[ -f "$PREV_LOG" ]]; then
     echo "Using uncompressed previous day's alerts from $PREV_LOG" >> /tmp/debug.log
-    jq -c '. |= select(.timestamp >= "'$START_TIME'")' "$PREV_LOG" >> /tmp/alerts_combined.json &
+    jq -c '. |= select(.timestamp >= "'$START_TIME'")' "$PREV_LOG" 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
 else
     echo "No previous alerts found. Using only current logs." >> /tmp/debug.log
-    jq -c '. |= select(.timestamp >= "'$START_TIME'")' /var/ossec/logs/alerts/alerts.json >> /tmp/alerts_combined.json &
+    jq -c '. |= select(.timestamp >= "'$START_TIME'")' /var/ossec/logs/alerts/alerts.json 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
 fi
 
 # Process the combined JSON stream
-jq -s '.' /tmp/alerts_combined.json > /tmp/alerts_combined_final.json
+jq -s '.' /tmp/alerts_combined.json 2>> /tmp/jq_errors.log > /tmp/alerts_combined_final.json
 
 # Debug: Check if the merged file contains data
 if [[ ! -s /tmp/alerts_combined_final.json ]]; then
@@ -145,7 +145,11 @@ fi
 echo "Success! Latest Wazuh-version is $LATEST_WAZUH_VERSION"
 
 # Debug: Check logs before filtering
-jq '.timestamp' /tmp/alerts_combined.json | head -n 10 >> /tmp/debug.log
+jq empty /tmp/alerts_combined_final.json 2>> /tmp/jq_errors.log
+if [[ $? -ne 0 ]]; then
+    echo "Error: JSON parsing failed for /tmp/alerts_combined_final.json!" >> /tmp/debug.log
+    exit 1
+fi
 
 # Disk Usage Overview
 echo "<h3>💾 Disk Usage</h3>" >> "$REPORT_FILE"
@@ -211,7 +215,12 @@ head -n 10 /tmp/alerts_combined_final.json >> /tmp/debug.log
 NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
     select(type == "object") | select(.rule.level < '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
+' 2>> /tmp/jq_errors.log | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
+
+if [[ $? -ne 0 ]]; then
+    echo "Error: jq failed to process non-critical alerts!" >> /tmp/debug.log
+    exit 1
+fi
 
 # Debug: Print non-critical alerts
 echo "Debug: Non-Critical Alerts:" >> /tmp/debug.log
@@ -231,11 +240,12 @@ fi
 CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
     select(type == "object") | select(.rule.level >= '$LEVEL' and .timestamp >= "'$START_TIME'") |
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
+' 2>> /tmp/jq_errors.log | sort | uniq -c | sort -nr | head -n $TOP_ALERTS_COUNT)
 
-# Debug: Print critical alerts
-echo "Debug: Critical Alerts:" >> /tmp/debug.log
-echo "$CRITICAL_ALERTS" >> /tmp/debug.log
+if [[ $? -ne 0 ]]; then
+    echo "Error: jq failed to process critical alerts!" >> /tmp/debug.log
+    exit 1
+fi
 
 if [[ -z "$CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No critical alerts found.</p>" >> "$REPORT_FILE"
