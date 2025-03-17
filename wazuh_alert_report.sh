@@ -130,6 +130,97 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
+# HTML report header
+echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
+echo "<h2 style='color:blue;'>🔹 Daily Wazuh Report - $(date) </h2>" >> "$REPORT_FILE"
+echo "<p>Hello Team,</p><p>Here's your daily Wazuh alert summary:</p>" >> "$REPORT_FILE"
+
+# System Updates Check
+echo "<h3>🔄 System Updates Status</h3>" >> "$REPORT_FILE"
+if [[ "$UBUNTU_UPDATES" -gt 0 ]]; then
+    echo "<p>🔴 <b>Ubuntu:</b> $UBUNTU_UPDATES updates available.</p>" >> "$REPORT_FILE"
+else
+    echo "<p>✅ <b>Ubuntu:</b> System is up to date.</p>" >> "$REPORT_FILE"
+fi
+
+# Wazuh Version Check
+INSTALLED_WAZUH_VERSION=$(dpkg-query -W -f='${Version}\n' wazuh-manager 2>/dev/null | cut -d '-' -f1)
+if [[ -z "$LATEST_WAZUH_VERSION" || "$LATEST_WAZUH_VERSION" == "null" ]]; then
+    echo "<p>⚠️ <b>Wazuh:</b> Could not fetch the latest version info. Please check network connectivity.</p>" >> "$REPORT_FILE"
+elif [[ "$INSTALLED_WAZUH_VERSION" == "$LATEST_WAZUH_VERSION" ]]; then
+    echo "<p>✅ <b>Wazuh:</b> Version $INSTALLED_WAZUH_VERSION is up to date.</p>" >> "$REPORT_FILE"
+else
+    echo "<p>🔴 <b>Wazuh:</b> Update available! Installed: $INSTALLED_WAZUH_VERSION → Latest: $LATEST_WAZUH_VERSION</p>" >> "$REPORT_FILE"
+fi
+
+# Disk Usage Overview
+echo "<h3>💾 Disk Usage</h3>" >> "$REPORT_FILE"
+echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
+echo "<tr><th>Filesystem</th><th>Size</th><th>Used</th><th>Avail</th><th>Use%</th></tr>" >> "$REPORT_FILE"
+df -h | grep "/dev/mapper/ubuntu--vg-ubuntu--lv" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"$4"</td><td>"$5"</td></tr>"}' >> "$REPORT_FILE"
+echo "</table>" >> "$REPORT_FILE"
+
+# Alerts Directory Breakdown
+echo "<h3>📂 Alerts Directory Usage</h3>" >> "$REPORT_FILE"
+TOTAL_ALERTS_SIZE=$(du -sb /var/ossec/logs/alerts | awk '{print $1}')
+ALERT_ITEMS=()
+while read -r size path; do
+    [[ "$path" =~ jq$|jq_errors.log$ ]] && continue
+    ALERT_ITEMS+=("$size $path")
+done < <(du -sb /var/ossec/logs/alerts/* 2>/dev/null | sort -nr)
+for file in /var/ossec/logs/alerts/alerts.json /var/ossec/logs/alerts/alerts.log; do
+    if [[ -f "$file" ]]; then
+        FILE_SIZE=$(stat -c %s "$file")
+        ALERT_ITEMS+=("$FILE_SIZE $file")
+    fi
+done
+echo "<p>Total size: <b>$(numfmt --to=iec-i --suffix=B $TOTAL_ALERTS_SIZE)</b></p>" >> "$REPORT_FILE"
+echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
+echo "<tr><th>Path</th><th>Size</th><th>Usage %</th></tr>" >> "$REPORT_FILE"
+calculate_percentage() {
+    local size=$1
+    local total=$2
+    awk "BEGIN {printf \"%.2f%%\", ($size / $total) * 100}"
+}
+for entry in "${ALERT_ITEMS[@]}"; do
+    ITEM_SIZE=$(echo "$entry" | awk '{print $1}')
+    ITEM_PATH=$(echo "$entry" | awk '{$1=""; print $0}' | sed 's/^ *//')
+    ITEM_PERCENT=$(calculate_percentage "$ITEM_SIZE" "$TOTAL_ALERTS_SIZE")
+    echo "<tr><td>$ITEM_PATH</td><td>$(numfmt --to=iec-i --suffix=B $ITEM_SIZE)</td><td>$ITEM_PERCENT</td></tr>" >> "$REPORT_FILE"
+done
+echo "</table>" >> "$REPORT_FILE"
+
+# Swap Usage
+echo "<h3>🔄 Swap Usage</h3>" >> "$REPORT_FILE"
+echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Total</th><th>Used</th><th>Free</th></tr>" >> "$REPORT_FILE"
+free -h | grep "Swap" | awk '{print "<tr><td>"$2"</td><td>"$3"</td><td>"$4"</td></tr>"}' >> "$REPORT_FILE"
+echo "</table>" >> "$REPORT_FILE"
+
+# Non-Critical Alerts
+if [[ -z "$NON_CRITICAL_ALERTS" ]]; then
+    echo "<p style='color: gray;'>No non-critical alerts found.</p>" >> "$REPORT_FILE"
+else
+    echo "<h3>⚠️ Top Non-Critical Alerts (Level < 13) from the last 24 hours</h3>" >> "$REPORT_FILE"
+    echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
+    echo "$NON_CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+    echo "</table>" >> "$REPORT_FILE"
+fi
+
+# Critical Alerts
+if [[ -z "$CRITICAL_ALERTS" ]]; then
+    echo "<p style='color: gray;'>No critical alerts found.</p>" >> "$REPORT_FILE"
+else
+    echo "<h3>🚨 Top Critical Alerts (Level ≥ 13) from the last 24 hours</h3>" >> "$REPORT_FILE"
+    echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
+    echo "$CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+    echo "</table>" >> "$REPORT_FILE"
+fi
+
+echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically generated report. If you encounter any issues, please report them on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub</a>.</p>" >> "$REPORT_FILE"
+
+# Close HTML
+echo "</body></html>" >> "$REPORT_FILE"
+
 echo "[$$] Sending email report..."
 (
 echo "Subject: $MAIL_SUBJECT"
@@ -140,9 +231,9 @@ cat "$REPORT_FILE"
 
 # Cleanup
 cleanup() {
-    echo "[$$] (DEBUG MODE) Skipping file cleanup to inspect logs..."
-    # rm -f /tmp/alerts_combined.json /tmp/alerts_combined_final.json
+    echo "[$$] Cleaning up temporary files..."
+    rm -f /tmp/alerts_combined.json /tmp/alerts_combined_final.json
 }
 trap cleanup EXIT
-
+swapoff -a; swapon -a
 echo "[$$] Script execution completed successfully!"
