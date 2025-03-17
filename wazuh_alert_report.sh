@@ -137,5 +137,5 @@ echo "Content-Type: text/html; charset=UTF-8"
 cat "$REPORT_FILE"
 ) | sendmail -f "$MAIL_FROM" "$MAIL_TO"
 
-echo "Report sent successfully."
+echo "Report sent successfully to $MAIL_TO."
 exit 0
