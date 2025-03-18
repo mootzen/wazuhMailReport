@@ -116,52 +116,6 @@ du -sh /var/ossec/logs/alerts
 TOTAL_ALERTS=$(jq '. | length' /tmp/alerts_combined_final.json)
 echo "[$$] Total alerts to process: $TOTAL_ALERTS"
 
-# Function to safely run jq with error handling, retries, and timeout
-jq_safe() {
-    local retries=10
-    local wait_time=10  # Wait time between retries in seconds
-    local timeout=60    # Total timeout for retries in seconds
-    local count=0
-    local success=0
-    local output=""
-    local start_time=$(date +%s)  # Record the start time for timeout
-
-    while [[ $count -lt $retries && $success -eq 0 ]]; do
-        output=$(jq -r "$2" "$1" 2>&1)
-
-        # Check for permission issues or other errors
-        if [[ $? -ne 0 ]]; then
-            if echo "$output" | grep -q "Permission denied"; then
-                echo "Warning: jq error: $output. Retrying... ($((count+1))/$retries)" >> /var/ossec/logs/alerts/jq_errors.log
-
-                # Check if we've exceeded the timeout
-                local current_time=$(date +%s)
-                local elapsed_time=$((current_time - start_time))
-                if [[ $elapsed_time -ge $timeout ]]; then
-                    echo "Error: Timeout reached after $timeout seconds. Giving up." >> /var/ossec/logs/alerts/jq_errors.log
-                    return 1  # Timeout reached, exit with error
-                fi
-
-                sleep $wait_time  # Wait before retrying
-            else
-                echo "Warning: jq error: $output" >> /var/ossec/logs/alerts/jq_errors.log
-                return 1  # Exit with error code if it's not a permission issue
-            fi
-        else
-            success=1  # Mark success if jq command works
-            echo "$output"
-        fi
-        ((count++))
-    done
-
-    if [[ $success -eq 0 ]]; then
-        echo "Error: jq failed after $retries retries." >> /var/ossec/logs/alerts/jq_errors.log
-        return 1  # Return error code after retries fail
-    fi
-
-    return 0  # Success
-}
-
 echo "[$$] Extracting non-critical alerts..."
 NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
     select(type == "object" and .rule.level < 12 and .timestamp >= "'$START_TIME'") |
