@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "[$$] Starting Wazuh Alert Report"
+echo "[$$] Starting Wazuh Mail Report"
 ascii_art="
                           _     __  __       _ _ ____                       _
  __      ____ _ _____   _| |__ |  \/  | __ _(_) |  _ \ ___ _ __   ___  _ __| |_
