@@ -216,7 +216,7 @@ echo "</table>" >> "$REPORT_FILE"
 if [[ -z "$NON_CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No non-critical alerts found.</p>" >> "$REPORT_FILE"
 else
-    echo "<h3>⚠️ Top Non-Critical Alerts (Level < 12) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
+    echo "<h3>⚠️ Top Non-Critical Alerts (Level < 12) from the last 24 hours</h3>" >> "$REPORT_FILE"
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
     echo "$NON_CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
@@ -226,7 +226,7 @@ fi
 if [[ -z "$CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No critical alerts found.</p>" >> "$REPORT_FILE"
 else
-    echo "<h3>🚨 Top Critical Alerts (Level ≥ 12) from the last $TIME_PERIOD</h3>" >> "$REPORT_FILE"
+    echo "<h3>🚨 Top Critical Alerts (Level ≥ 12) from the last 24 hours</h3>" >> "$REPORT_FILE"
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
     echo "$CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
