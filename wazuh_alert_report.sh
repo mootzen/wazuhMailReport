@@ -30,8 +30,7 @@ if [[ -f "$CONFIG_FILE" ]]; then
     echo "[$$] Config file found and sourced successfully."
     source "$CONFIG_FILE"
 else
-    echo "[$$] Error: Config file not found at $CONFIG_FILE"
-    exit 1
+    echo "[$$] Error: Config file not found at $CONFIG_FILE" >> /var/ossec/logs/alerts/jq_errors.log
 fi
 
 echo "[$$] Memory usage after loading config:"
@@ -79,8 +78,7 @@ jq -s '.' /tmp/alerts_combined.json 2>> /tmp/jq_errors.log > /tmp/alerts_combine
 
 # Debug check
 if [[ ! -s /tmp/alerts_combined_final.json ]]; then
-    echo "[$$] Error: Merged log file is empty! Check /tmp/jq_errors.log"
-    exit 1
+    echo "[$$] Error: Merged log file is empty! Check /tmp/jq_errors.log" >> /var/ossec/logs/alerts/jq_errors.log
 else
     echo "[$$] Success: Merged log file contains data."
 fi
@@ -88,8 +86,7 @@ fi
 # Debug: Check JSON file structure
 jq empty /tmp/alerts_combined_final.json 2>> /tmp/jq_errors.log
 if [[ $? -ne 0 ]]; then
-    echo "[$$] Error: JSON parsing failed!"
-    exit 1
+    echo "[$$] Error: JSON parsing failed!" >> /var/ossec/logs/alerts/jq_errors.log
 fi
 
 # Debug: Print first few lines of the merged JSON file
@@ -145,7 +142,7 @@ jq_safe() {
                 sleep $wait_time  # Wait before retrying
             else
                 echo "Warning: jq error: $output" >> /var/ossec/logs/alerts/jq_errors.log
-                return 1  # Exit on non-retryable errors
+                return 1 
             fi
         else
             success=1  # jq succeeded
@@ -169,8 +166,7 @@ NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
 ' | sort | uniq -c | sort -nr | head -n 10)
 
 if [[ $? -ne 0 ]]; then
-    echo "[$$] Error: jq failed to process non-critical alerts!"
-    exit 1
+    echo "[$$] Warning: jq failed to process non-critical alerts!" >> /var/ossec/logs/alerts/jq_errors.log
 fi
 
 # Debug: Print non-critical alerts
@@ -184,8 +180,7 @@ CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined_final.json" '
 ' | sort | uniq -c | sort -nr | head -n 10)
 
 if [[ $? -ne 0 ]]; then
-    echo "[$$] Error: jq failed to process critical alerts!"
-    exit 1
+    echo "[$$] Error: jq failed to process critical alerts!" >> /var/ossec/logs/alerts/jq_errors.log
 fi
 
 # Debug: Print critical alerts
