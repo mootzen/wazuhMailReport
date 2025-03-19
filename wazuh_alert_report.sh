@@ -100,7 +100,7 @@ echo "[$$] Processing system updates check..."
 UBUNTU_UPDATES=$(apt list --upgradable 2>/dev/null | grep -v "Listing..." | wc -l)
 
 echo "[$$] Fetching latest Wazuh version..."
-LATEST_WAZUH_VERSION=$(curl -s --max-time 10 https://api.github.com/repos/wazuh/wazuh/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+LATEST_WAZUH_VERSION=$(curl -s --max-time 10 https://api.github.com/repos/wazuh/wazuh/releases/latest | jq -c -r '.tag_name' | sed 's/^v//')
 
 if [[ -z "$LATEST_WAZUH_VERSION" || "$LATEST_WAZUH_VERSION" == "null" ]]; then
     echo "[$$] Warning: Could not fetch the latest Wazuh version."
@@ -127,7 +127,7 @@ jq_safe() {
     local start_time=$(date +%s)  # Record the start time for timeout
 
     while [[ $count -lt $retries && $success -eq 0 ]]; do
-        output=$(jq -r "$2" "$1" 2>&1)
+        output=$(jq -c -r "$2" "$1" 2>&1)
 
         # Check for permission issues or other errors
         if [[ $? -ne 0 ]]; then
