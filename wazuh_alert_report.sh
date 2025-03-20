@@ -161,7 +161,7 @@ jq_safe() {
 
 echo "[$$] Extracting non-critical alerts..."
 NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
-    select(type == "object" and .rule.level < 12 and .timestamp >= "'$START_TIME'") | @csv
+    select(type == "object" and .rule.level < 12 and .timestamp >= "'$START_TIME'") | @tsv
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n 10)
 
@@ -175,7 +175,7 @@ echo "$NON_CRITICAL_ALERTS"
 
 echo "[$$] Extracting critical alerts..."
 CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
-    select(type == "object" and .rule.level >= 12 and .timestamp >= "'$START_TIME'") | @csv
+    select(type == "object" and .rule.level >= 12 and .timestamp >= "'$START_TIME'") | @tsv
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n 10)
 
