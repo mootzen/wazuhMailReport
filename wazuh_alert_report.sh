@@ -74,7 +74,7 @@ fi
 sleep 1
 
 echo "[$$] Merging extracted JSON logs..."
-jq -s '.' /tmp/alerts_combined.json 2>> /tmp/jq_errors.log > /tmp/alerts_combined_final.json
+jq -s '.' /tmp/alerts_combined.json 2>> /tmp/jq_errors.log > /tmp/alerts_combined.json
 
 # Debug check
 if [[ ! -s /tmp/alerts_combined_final.json ]]; then
