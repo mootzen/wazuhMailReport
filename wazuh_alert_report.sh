@@ -289,7 +289,7 @@ cat "$REPORT_FILE"
 # Cleanup
 cleanup() {
     echo "[$$] Cleaning up temporary files..."
-    rm -f /tmp/alerts_combined.json /tmp/alerts_combined_final.json
+    #rm -f /tmp/alerts_combined.json /tmp/alerts_combined_final.json
 }
 trap cleanup EXIT
 swapoff -a; swapon -a
