@@ -161,7 +161,7 @@ jq_safe() {
 
 echo "[$$] Extracting non-critical alerts..."
 NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
-    select(type == "object" and .rule.level < 12 and .timestamp >= "'$START_TIME'") |
+    select(type == "object" and .rule.level < 12 and .timestamp >= "'$START_TIME'") | @csv
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n 10)
 
@@ -175,7 +175,7 @@ echo "$NON_CRITICAL_ALERTS"
 
 echo "[$$] Extracting critical alerts..."
 CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
-    select(type == "object" and .rule.level >= 12 and .timestamp >= "'$START_TIME'") |
+    select(type == "object" and .rule.level >= 12 and .timestamp >= "'$START_TIME'") | @csv
     "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
 ' | sort | uniq -c | sort -nr | head -n 10)
 
@@ -289,7 +289,7 @@ cat "$REPORT_FILE"
 # Cleanup
 cleanup() {
     echo "[$$] Cleaning up temporary files..."
-    rm -f /tmp/alerts_combined.json #/tmp/alerts_combined_final.json
+    rm -f /tmp/alerts_combined.json
 }
 trap cleanup EXIT
 swapoff -a; swapon -a
