@@ -2,13 +2,13 @@
 
 echo "[$$] Starting Wazuh Mail Report"
 ascii_art="
-                          _     __  __       _ _ ____                       _
+                           _     __  __       _ _ ____                       _
  __      ____ _ _____   _| |__ |  \/  | __ _(_) |  _ \ ___ _ __   ___  _ __| |_
- \ \ /\ / / _\ |_  / | | | '_ \| |\/| |/ _\ | | | |_) / _ \ '_ \ / _ \| '__| __|
-  \ V  V / (_| |/ /| |_| | | | | |  | | (_| | | |  _ <  __/ |_) | (_) | |  | |_
-   \_/\_/ \__,_/___|\__,_|_| |_|_|  |_|\__,_|_|_|_| \_\___| .__/ \___/|_|   \__|
-                                                          |_|
-    by mootzen 2025
+  \ \ /\ / / _\ |_  / | | | '_ \| |\/| |/ _\ | | | |_) / _ \ '_ \ / _ \| '__| __|
+   \ V  V / (_| |/ /| |_| | | | | |  | | (_| | | |  _ <  __/ |_) | (_) | |  | |_
+    \_/\_/ \__,_/___|\__,_|_| |_|_|  |_|\__,_|_|_|_| \_\___| .__/ \___/|_|   \__|
+                                                           |_|
+     by mootzen 2025
 "
 VERSION="0.1"
 echo -e "$ascii_art"
@@ -74,7 +74,7 @@ fi
 sleep 1
 
 echo "[$$] Merging extracted JSON logs..."
-jq -s '.' /tmp/alerts_combined.json 2>> /tmp/jq_errors.log > /tmp/alerts_combined.json
+jq -s '.' /tmp/alerts_combined.json 2>> /tmp/jq_errors.log > /tmp/alerts_combined_final.json
 
 # Debug check
 if [[ ! -s /tmp/alerts_combined_final.json ]]; then
@@ -86,7 +86,7 @@ fi
 # Debug: Check JSON file structure
 jq empty /tmp/alerts_combined_final.json 2>> /tmp/jq_errors.log
 if [[ $? -ne 0 ]]; then
-    echo "[$$] Error: JSON parsing failed!" >> /var/ossec/logs/alerts/jq_errors.log
+    echo "[$$] Error: JSON parsing failed! Check /tmp/jq_errors.log" >> /var/ossec/logs/alerts/jq_errors.log
 fi
 
 # Debug: Print first few lines of the merged JSON file
@@ -276,6 +276,7 @@ else
 fi
 
 echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically generated report. If you encounter any issues, please report them on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub</a>.</p>" >> "$REPORT_FILE"
+
 # Close HTML
 echo "</body></html>" >> "$REPORT_FILE"
 
