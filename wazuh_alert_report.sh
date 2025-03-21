@@ -18,7 +18,7 @@ exec 200>/tmp/wazuh_report.lock
 flock -n 200 || { echo "[$$] Another instance is running. Exiting."; exit 1; }
 
 echo "[$$] Deleting existing tmp files..."
-rm -f /tmp/alerts_combined.json /tmp/alerts_combined_final.json
+rm -f /tmp/alerts_combined.json
 
 echo "[$$] Current working directory: $(pwd)"
 
@@ -73,25 +73,22 @@ fi
 # Wait a moment to ensure file is created
 sleep 1
 
-echo "[$$] Merging extracted JSON logs..."
-jq -s '.' /tmp/alerts_combined.json 2>> /tmp/jq_errors.log > /tmp/alerts_combined_final.json
-
 # Debug check
-if [[ ! -s /tmp/alerts_combined_final.json ]]; then
+if [[ ! -s /tmp/alerts_combined.json ]]; then
     echo "[$$] Error: Merged log file is empty! Check /tmp/jq_errors.log" >> /var/ossec/logs/alerts/jq_errors.log
 else
     echo "[$$] Success: Merged log file contains data."
 fi
 
 # Debug: Check JSON file structure
-jq empty /tmp/alerts_combined_final.json 2>> /tmp/jq_errors.log
+jq empty /tmp/alerts_combined.json 2>> /tmp/jq_errors.log
 if [[ $? -ne 0 ]]; then
     echo "[$$] Error: JSON parsing failed! Check /tmp/jq_errors.log" >> /var/ossec/logs/alerts/jq_errors.log
 fi
 
 # Debug: Print first few lines of the merged JSON file
 echo "[$$] Debug: First 10 lines of merged JSON file:"
-head -n 10 /tmp/alerts_combined_final.json
+head -n 10 /tmp/alerts_combined.json
 
 echo "[$$] Processing system updates check..."
 UBUNTU_UPDATES=$(apt list --upgradable 2>/dev/null | grep -v "Listing..." | wc -l)
@@ -110,7 +107,7 @@ echo "[$$] Checking alerts directory usage..."
 du -sh /var/ossec/logs/alerts
 
 # Count total number of alerts for progress bar
-TOTAL_ALERTS=$(jq '. | length' /tmp/alerts_combined_final.json)
+TOTAL_ALERTS=$(jq '. | length' /tmp/alerts_combined.json)
 echo "[$$] Total alerts to process: $TOTAL_ALERTS"
 
 jq_safe() {
