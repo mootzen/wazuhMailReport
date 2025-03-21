@@ -254,27 +254,28 @@ free -h | grep "Swap" | awk '{print "<tr><td>"$2"</td><td>"$3"</td><td>"$4"</td>
 echo "</table>" >> "$REPORT_FILE"
 
 # Non-Critical Alerts
+echo "DEBUG: Non-Critical Alerts: $NON_CRITICAL_ALERTS"
 if [[ -z "$NON_CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No non-critical alerts found.</p>" >> "$REPORT_FILE"
 else
     echo "<h3>⚠️ Top Non-Critical Alerts (Level < 12) from the last 24 hours</h3>" >> "$REPORT_FILE"
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
-    echo "$NON_CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+    echo "$NON_CRITICAL_ALERTS" | awk 'NF>=3 {print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
 fi
 
 # Critical Alerts
+echo "DEBUG: Critical Alerts: $CRITICAL_ALERTS"
 if [[ -z "$CRITICAL_ALERTS" ]]; then
     echo "<p style='color: gray;'>No critical alerts found.</p>" >> "$REPORT_FILE"
 else
     echo "<h3>🚨 Top Critical Alerts (Level ≥ 12) from the last 24 hours</h3>" >> "$REPORT_FILE"
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
-    echo "$CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+    echo "$CRITICAL_ALERTS" | awk 'NF>=3 {print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
 fi
 
 echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically generated report. If you encounter any issues, please report them on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub</a>.</p>" >> "$REPORT_FILE"
-
 # Close HTML
 echo "</body></html>" >> "$REPORT_FILE"
 
