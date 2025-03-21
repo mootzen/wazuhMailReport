@@ -5,7 +5,7 @@ ascii_art="
                            _     __  __       _ _ ____                       _
  __      ____ _ _____   _| |__ |  \/  | __ _(_) |  _ \ ___ _ __   ___  _ __| |_
   \ \ /\ / / _\ |_  / | | | '_ \| |\/| |/ _\ | | | |_) / _ \ '_ \ / _ \| '__| __|
-   \ V  V / (_| |/ /| |_| | | | | |  | | (_| | | |  _ <  __/ |_) | (_) | |  | |_
+   \ V  V / (_| |/ /| |_| | | | |  | | (_| | | |  _ <  __/ |_) | (_) | |  | |_
     \_/\_/ \__,_/___|\__,_|_| |_|_|  |_|\__,_|_|_|_| \_\___| .__/ \___/|_|   \__|
                                                            |_|
      by mootzen 2025
@@ -110,75 +110,17 @@ du -sh /var/ossec/logs/alerts
 TOTAL_ALERTS=$(jq '. | length' /tmp/alerts_combined.json)
 echo "[$$] Total alerts to process: $TOTAL_ALERTS"
 
-jq_safe() {
-    local file="$1"
-    local filter="$2"
-    local retries=10
-    local wait_time=10  # Wait time between retries in seconds
-    local timeout=60    # Total timeout for retries in seconds
-    local count=0
-    local success=0
-    local start_time=$(date +%s)  # Record the start time for timeout
-
-    while [[ $count -lt $retries && $success -eq 0 ]]; do
-        output=$(jq -c "$filter" "$file" 2>&1)  # Streaming processing with -c
-
-        if [[ $? -ne 0 ]]; then
-            # Check for permission issues or jq errors
-            if echo "$output" | grep -q "Permission denied"; then
-                echo "Warning: jq error: $output. Retrying... ($((count+1))/$retries)" >> /var/ossec/logs/alerts/jq_errors.log
-
-                # Timeout handling
-                local current_time=$(date +%s)
-                local elapsed_time=$((current_time - start_time))
-                if [[ $elapsed_time -ge $timeout ]]; then
-                    echo "Error: Timeout reached after $timeout seconds. Giving up." >> /var/ossec/logs/alerts/jq_errors.log
-                    return 1
-                fi
-
-                sleep $wait_time  # Wait before retrying
-            else
-                echo "Warning: jq error: $output" >> /var/ossec/logs/alerts/jq_errors.log
-                return 1 
-            fi
-        else
-            success=1  # jq succeeded
-            echo "$output"
-        fi
-        ((count++))
-    done
-
-    if [[ $success -eq 0 ]]; then
-        echo "Error: jq failed after $retries retries." >> /var/ossec/logs/alerts/jq_errors.log
-        return 1
-    fi
-
-    return 0  # Success
-}
-
+# Extract non-critical alerts
 echo "[$$] Extracting non-critical alerts..."
-NON_CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
-    select(type == "object" and .rule.level < 12 and .timestamp >= "'$START_TIME'") | @tsv
-    "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' | sort | uniq -c | sort -nr | head -n 10)
-
-if [[ $? -ne 0 ]]; then
-    echo "[$$] Warning: jq failed to process non-critical alerts!" >> /var/ossec/logs/alerts/jq_errors.log
-fi
+NON_CRITICAL_ALERTS=$(jq -r 'select(type == "object" and .rule.level < 12 and .timestamp >= "'$START_TIME'") | "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"' /tmp/alerts_combined.json | sort | uniq -c | sort -nr | head -n 10)
 
 # Debug: Print non-critical alerts
 echo "[$$] Debug: Non-Critical Alerts:"
 echo "$NON_CRITICAL_ALERTS"
 
+# Extract critical alerts
 echo "[$$] Extracting critical alerts..."
-CRITICAL_ALERTS=$(jq_safe "/tmp/alerts_combined.json" '
-    select(type == "object" and .rule.level >= 12 and .timestamp >= "'$START_TIME'") | @tsv
-    "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' | sort | uniq -c | sort -nr | head -n 10)
-
-if [[ $? -ne 0 ]]; then
-    echo "[$$] Error: jq failed to process critical alerts!" >> /var/ossec/logs/alerts/jq_errors.log
-fi
+CRITICAL_ALERTS=$(jq -r 'select(type == "object" and .rule.level >= 12 and .timestamp >= "'$START_TIME'") | "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"' /tmp/alerts_combined.json | sort | uniq -c | sort -nr | head -n 10)
 
 # Debug: Print critical alerts
 echo "[$$] Debug: Critical Alerts:"
@@ -257,7 +199,7 @@ if [[ -z "$NON_CRITICAL_ALERTS" ]]; then
 else
     echo "<h3>⚠️ Top Non-Critical Alerts (Level < 12) from the last 24 hours</h3>" >> "$REPORT_FILE"
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
-    echo "$NON_CRITICAL_ALERTS" | awk 'NF>=3 {print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+    echo "$NON_CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
 fi
 
@@ -268,7 +210,7 @@ if [[ -z "$CRITICAL_ALERTS" ]]; then
 else
     echo "<h3>🚨 Top Critical Alerts (Level ≥ 12) from the last 24 hours</h3>" >> "$REPORT_FILE"
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
-    echo "$CRITICAL_ALERTS" | awk 'NF>=3 {print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+    echo "$CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
 fi
 
