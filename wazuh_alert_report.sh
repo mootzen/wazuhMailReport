@@ -225,7 +225,7 @@ fi
 if [[ -z "$TOP_AGENTS" ]]; then
     echo "<p style='color: gray;'>No agents reported any alerts in the last 24 hours.</p>" >> "$REPORT_FILE"
 else
-    echo "<h3>👨‍💻 Top Alerting Agents (by number of alerts)</h3>" >> "$REPORT_FILE"
+    echo "<h3>🤖 Top Agents (by number of alerts)</h3>" >> "$REPORT_FILE"
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Agent Name</th></tr>" >> "$REPORT_FILE"
     echo "$TOP_AGENTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
