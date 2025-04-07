@@ -126,6 +126,13 @@ CRITICAL_ALERTS=$(jq -r 'select(type == "object" and .rule.level >= 12 and .time
 echo "[$$] Debug: Critical Alerts:"
 echo "$CRITICAL_ALERTS"
 
+# Extract Top Alerting Agents
+echo "[$$] Extracting top alerting agents..."
+TOP_AGENTS=$(jq -r '.agent.name' /tmp/alerts_combined.json | sort | uniq -c | sort -nr | head -n 10)
+
+echo "[$$] Debug: Top Alerting Agents:"
+echo "$TOP_AGENTS"
+
 # HTML report header
 echo "<html><body style='font-family: Arial, sans-serif;'>" > "$REPORT_FILE"
 echo "<h2 style='color:blue;'>🔹 Daily Wazuh Report - $(date) </h2>" >> "$REPORT_FILE"
@@ -211,6 +218,16 @@ else
     echo "<h3>🚨 Top Critical Alerts (Level ≥ 12) from the last 24 hours</h3>" >> "$REPORT_FILE"
     echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
     echo "$CRITICAL_ALERTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td><td>"$3"</td><td>"substr($0, index($0,$4))"</td></tr>"}' >> "$REPORT_FILE"
+    echo "</table>" >> "$REPORT_FILE"
+fi
+
+# Top Alerting Agents
+if [[ -z "$TOP_AGENTS" ]]; then
+    echo "<p style='color: gray;'>No agents reported any alerts in the last 24 hours.</p>" >> "$REPORT_FILE"
+else
+    echo "<h3>👨‍💻 Top Alerting Agents (by number of alerts)</h3>" >> "$REPORT_FILE"
+    echo "<table border='1' cellspacing='0' cellpadding='5'><tr><th>Count</th><th>Agent Name</th></tr>" >> "$REPORT_FILE"
+    echo "$TOP_AGENTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td></tr>"}' >> "$REPORT_FILE"
     echo "</table>" >> "$REPORT_FILE"
 fi
 
