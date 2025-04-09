@@ -91,5 +91,4 @@ sed -i '/wazuh_alert_report.sh/d' /etc/crontab
 ```
 
 ## Example-Report
-
-
+![Unbenannt](https://github.com/user-attachments/assets/1964c121-3b84-442c-b886-059f3ffbfde3)
