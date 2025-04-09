@@ -231,7 +231,7 @@ else
     echo "</table>" >> "$REPORT_FILE"
 fi
 
-echo "<p style='font-size: 12px; color: lightgray;'>🛟 This is an automatically generated report. If you encounter any issues, please report them on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub</a>.</p>" >> "$REPORT_FILE"
+echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically generated report. If you encounter any issues, please report them on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub</a>.</p>" >> "$REPORT_FILE"
 
 # Close HTML
 echo "</body></html>" >> "$REPORT_FILE"
