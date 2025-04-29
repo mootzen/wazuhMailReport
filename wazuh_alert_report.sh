@@ -171,12 +171,7 @@ while read -r size path; do
     [[ "$path" =~ jq$|jq_errors.log$ ]] && continue
     ALERT_ITEMS+=("$size $path")
 done < <(du -sb /var/ossec/logs/alerts/* 2>/dev/null | sort -nr)
-for file in /var/ossec/logs/alerts/alerts.json /var/ossec/logs/alerts/alerts.log; do
-    if [[ -f "$file" ]]; then
-        FILE_SIZE=$(stat -c %s "$file")
-        ALERT_ITEMS+=("$FILE_SIZE $file")
-    fi
-done
+
 echo "<p>Total size: <b>$(numfmt --to=iec-i --suffix=B $TOTAL_ALERTS_SIZE)</b></p>" >> "$REPORT_FILE"
 echo "<table border='1' cellspacing='0' cellpadding='5'>" >> "$REPORT_FILE"
 echo "<tr><th>Path</th><th>Size</th><th>Usage %</th></tr>" >> "$REPORT_FILE"
