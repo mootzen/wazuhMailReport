@@ -183,7 +183,12 @@ echo "<tr><th>Path</th><th>Size</th><th>Usage %</th></tr>" >> "$REPORT_FILE"
 calculate_percentage() {
     local size=$1
     local total=$2
-    awk "BEGIN {printf \"%.2f%%\", ($size / $total) * 100}"
+    if [[ $total -eq 0 ]]; then
+        echo "0.00%"
+    else
+        # bc for floating-point division with 2 decimal places
+        printf "%.2f%%" "$(echo "scale=4; ($size/$total)*100" | bc)"
+    fi
 }
 for entry in "${ALERT_ITEMS[@]}"; do
     ITEM_SIZE=$(echo "$entry" | awk '{print $1}')
