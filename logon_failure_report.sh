@@ -1,55 +1,96 @@
 #!/bin/bash
 
-# Load configuration
-source "$(dirname "$0")/report.conf"
-
-ALERT_FILE="/var/ossec/logs/alerts/alerts.json"
-START_TIME=$(date --utc --date="24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
+# Config
+REPORT_FILE="/tmp/wazuh_logon_failure_report.html"
+START_TIME=$(date --utc -d "24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
+ENABLE_EMOJIS=true
 
 echo "[DEBUG] START_TIME set to $START_TIME"
-echo "[DEBUG] Processing alert file: $ALERT_FILE"
-du -h "$ALERT_FILE"
+echo "[DEBUG] Writing report to $REPORT_FILE"
 
-# Limit to last ~100,000 lines for performance
-echo "[DEBUG] Running jq filter..."
-ALERTS=$(tail -n 100000 "$ALERT_FILE" | jq -c --arg start_time "$START_TIME" '
-  select(
-    type == "object"
-    and (.rule.groups[]? == "authentication_failed" or .rule.mitre.technique[]? == "Brute Force")
-    and (.timestamp >= $start_time)
-  )
-')
+# Log sources
+YESTERDAY=$(date --date="yesterday" +%d)
+LOG_DIR="/var/ossec/logs/alerts/$(date +%Y/%b)"
+PREV_LOG="$LOG_DIR/ossec-alerts-$YESTERDAY.json"
+PREV_LOG_GZ="$PREV_LOG.gz"
 
-echo "[DEBUG] Filtered alerts: $(echo "$ALERTS" | wc -l)"
+echo "[$$] Debug: Searching for logs in $LOG_DIR"
 
-# Count total alerts
-TOTAL_ALERTS=$(echo "$ALERTS" | wc -l)
-echo "[DEBUG] Total alerts: $TOTAL_ALERTS"
+# Combine logs
+touch /tmp/alerts_combined.json
+echo "[$$] Extracting and merging logs using jq streaming..."
 
-# Extract top alerts
-TOP_ALERTS=$(echo "$ALERTS" | jq -r '.rule.description' | sort | uniq -c | sort -nr | head -n "$TOP_ALERTS_COUNT")
+if [[ -f "$PREV_LOG_GZ" ]]; then
+    echo "[$$] Extracting previous day's alerts from $PREV_LOG_GZ"
+    gunzip -c "$PREV_LOG_GZ" | jq -c 'select(. != null and .timestamp >= "'$START_TIME'")' 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
+elif [[ -f "$PREV_LOG" ]]; then
+    echo "[$$] Using uncompressed previous day's alerts from $PREV_LOG"
+    jq -c 'select(. != null and .timestamp >= "'$START_TIME'")' "$PREV_LOG" 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
+else
+    echo "[$$] No previous alerts found. Using only current logs."
+fi
 
-# Generate HTML mail body
-MAIL_BODY=$(cat <<EOF
-<html>
-<head>
-  <style>
-    body { font-family: Arial; }
-    h2 { color: #2e6c80; }
-    ul { padding-left: 20px; }
-  </style>
-</head>
-<body>
-  <h2>Wazuh Login Failure Report (${TIME_PERIOD})</h2>
-  <p><strong>Total login failure alerts:</strong> $TOTAL_ALERTS</p>
-  <h3>Top ${TOP_ALERTS_COUNT} Alert Types</h3>
-  <ul>
-$(echo "$TOP_ALERTS" | awk '{count=$1; $1=""; desc=substr($0,2); print "<li><strong>" count "</strong> - " desc "</li>"}')
-  </ul>
-</body>
-</html>
-EOF
-)
+jq -c 'select(. != null and .timestamp >= "'$START_TIME'")' /var/ossec/logs/alerts/alerts.json 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
 
-# Send email
-echo "$MAIL_BODY" | mail -a "Content-Type: text/html" -s "$MAIL_SUBJECT" "$MAIL_TO"
+# Emoji toggle
+CRIT_EMOJI="🚨"
+WARN_EMOJI="⚠️"
+AGENT_EMOJI="🤖"
+[[ "$ENABLE_EMOJIS" != true ]] && CRIT_EMOJI="" && WARN_EMOJI="" && AGENT_EMOJI=""
+
+# Extract login failure alerts
+echo "[$$] Extracting login failure alerts..."
+
+LOGIN_FAILURES=$(jq -r '
+    select(.rule.description | test("login|authentication"; "i")) 
+    | select(.timestamp >= "'$START_TIME'")
+    | "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"' /tmp/alerts_combined.json |
+    sort | uniq -c | sort -nr | head -n 10)
+
+TOP_AGENTS=$(jq -r '
+    select(.rule.description | test("login|authentication"; "i")) 
+    | select(.timestamp >= "'$START_TIME'")
+    | .agent.name' /tmp/alerts_combined.json | sort | uniq -c | sort -nr | head -n 10)
+
+# HTML Header
+echo "<html><head><style>
+body { font-family: Arial, sans-serif; }
+h2 { color: #2c3e50; }
+table { border-collapse: collapse; width: 100%; }
+th, td { padding: 8px 12px; border: 1px solid #ccc; }
+th { background-color: #f5f5f5; }
+.critical { background-color: #ffe0e0; }
+.warning { background-color: #fff3cd; }
+.gray { color: gray; }
+</style></head><body>" > "$REPORT_FILE"
+
+echo "<h2>$CRIT_EMOJI Wazuh Login Failure Report (Last 24 Hours)</h2>" >> "$REPORT_FILE"
+
+# Login failures
+if [[ -z "$LOGIN_FAILURES" ]]; then
+    echo "<p class='gray'>No login failures found in the last 24 hours.</p>" >> "$REPORT_FILE"
+else
+    echo "<h3>$WARN_EMOJI Top Login Failures</h3>" >> "$REPORT_FILE"
+    echo "<table><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
+    echo "$LOGIN_FAILURES" | awk -v emojis=$ENABLE_EMOJIS '
+    {
+        level=$2;
+        cls = (level >= 12) ? "critical" : "warning";
+        print "<tr class=\"" cls "\"><td>" $1 "</td><td>" $2 "</td><td>" $3 "</td><td>" substr($0, index($0,$4)) "</td></tr>";
+    }' >> "$REPORT_FILE"
+    echo "</table>" >> "$REPORT_FILE"
+fi
+
+# Top agents
+if [[ -z "$TOP_AGENTS" ]]; then
+    echo "<p class='gray'>No agents reported login failures in the last 24 hours.</p>" >> "$REPORT_FILE"
+else
+    echo "<h3>$AGENT_EMOJI Top Agents (by login failure count)</h3>" >> "$REPORT_FILE"
+    echo "<table><tr><th>Count</th><th>Agent Name</th></tr>" >> "$REPORT_FILE"
+    echo "$TOP_AGENTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td></tr>"}' >> "$REPORT_FILE"
+    echo "</table>" >> "$REPORT_FILE"
+fi
+
+# Footer
+echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically generated login failure report. Issues? Report on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub</a>.</p>" >> "$REPORT_FILE"
+echo "</body></html>" >> "$REPORT_FILE"
