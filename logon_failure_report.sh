@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Load configuration
-source "$(dirname "$0")/config.cfg"
+source "$(dirname "$0")/report.conf"
 
 # Set alert file location
 ALERT_FILE="/var/ossec/logs/alerts/alerts.json"
