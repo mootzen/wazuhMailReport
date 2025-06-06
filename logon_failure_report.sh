@@ -6,21 +6,15 @@ source "$(dirname "$0")/config.cfg"
 # Set alert file location
 ALERT_FILE="/var/ossec/logs/alerts/alerts.json"
 
-# Calculate time filter
-TIME_FILTER=$(date -d "$TIME_PERIOD ago" --iso-8601=seconds)
+START_TIME=$(date --utc --date="24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
 
 # Filter alerts
-ALERTS=$(jq -c --arg time_filter "$TIME_FILTER" '
+jq --arg start_time "$START_TIME" '
   select(
-    (
-      (.rule.groups[]? == "authentication_failed")
-      or (.rule.mitre.technique[]? == "Brute Force")
-      or (.rule.mitre.technique[]? == "Valid Accounts")
-    )
-    and (."@timestamp" >= $time_filter)
+    (.rule.groups[]? == "authentication_failed" or .rule.mitre.technique[]? == "Brute Force")
+    and (.["@timestamp"] >= $start_time)
   )
-' "$ALERT_FILE")
-
+'
 # Count total alerts
 TOTAL_ALERTS=$(echo "$ALERTS" | wc -l)
 
