@@ -117,18 +117,15 @@ fi
 echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically generated login failure report. Issues? Report on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub</a>.</p>" >> "$REPORT_FILE"
 echo "</body></html>" >> "$REPORT_FILE"
 echo "[$$] Sending email report..."
-(
-echo "Subject: $MAIL_SUBJECT"
-echo "MIME-Version: 1.0"
-echo "Content-Type: text/html; charset=UTF-8"
-(
-  echo "Subject: $MAIL_SUBJECT"
-  echo "MIME-Version: 1.0"
-  echo "Content-Type: text/html; charset=UTF-8"
-  echo
-  cat "$REPORT_FILE"
-) | sendmail -f "$MAIL_FROM" "$MAIL_TO"
-if sendmail -f "$MAIL_FROM" "$MAIL_TO" < "$REPORT_FILE"; then
+
+if sendmail -f "$MAIL_FROM" "$MAIL_TO" <<EOF
+Subject: $MAIL_SUBJECT
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+$(cat "$REPORT_FILE")
+EOF
+then
     echo "[$$] Email sent successfully."
 else
     echo "[$$] ERROR: Failed to send email."
