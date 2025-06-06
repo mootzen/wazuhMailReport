@@ -20,7 +20,7 @@ du -h "$ALERT_FILE"
 
 # Filter relevant alerts into a temporary variable
 echo "[DEBUG] Running jq filter..."
-ALERTS=$(jq --arg start_time "$START_TIME" '
+ALERTS=$(jq -c --arg start_time "$START_TIME" '
   select(
     (.rule.groups[]? == "authentication_failed" or .rule.mitre.technique[]? == "Brute Force")
     and (.["@timestamp"] >= $start_time)
