@@ -1,6 +1,6 @@
 #!/bin/bash
 # Load mail config
-CONFIG_FILE="./config.cfg"
+CONFIG_FILE="./report.conf"
 if [[ -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 else
