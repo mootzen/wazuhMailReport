@@ -1,9 +1,26 @@
 #!/bin/bash
+# Load mail config
+CONFIG_FILE="./config.cfg"
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+else
+    echo "[$$] ERROR: Config file '$CONFIG_FILE' not found."
+    exit 1
+fi
 
-# Config
+# Subject set dynamically
+MAIL_SUBJECT="🚨 Wazuh Logon Report - $(date '+%Y-%m-%d %H:%M')"
+
+# Other constants
 REPORT_FILE="/tmp/wazuh_logon_failure_report.html"
 START_TIME=$(date --utc -d "24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
 ENABLE_EMOJIS=true
+
+# Verify mail settings
+if [[ -z "$MAIL_TO" || -z "$MAIL_FROM" ]]; then
+    echo "[$$] ERROR: MAIL_TO or MAIL_FROM is not set in config."
+    exit 1
+fi
 
 if [[ -z "$MAIL_TO" || -z "$MAIL_FROM" || -z "$MAIL_SUBJECT" ]]; then
     echo "[$$] ERROR: MAIL_TO, MAIL_FROM, or MAIL_SUBJECT is not set."
