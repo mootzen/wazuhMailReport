@@ -16,9 +16,8 @@ TIME_FILTER="now-${TIME_PERIOD}"
 TMP_FILE=$(mktemp)
 
 # Extract relevant alerts from the last TIME_PERIOD with login failure context
-jq -r \
-    --arg time_filter "$TIME_FILTER" \
-    'select((.rule.groups[]? == "authentication_failed" or .rule.mitre.technique[]? == "Brute Force") and .@timestamp >= $time_filter)' \
+jq -r --arg time_filter "$TIME_FILTER" \
+  'select((.rule.groups[]? == "authentication_failed" or .rule.mitre.technique[]? == "Brute Force") and .["@timestamp"] >= $time_filter)' \
     /var/ossec/logs/alerts/alerts.json > "$TMP_FILE"
 
 # Generate summary counts
