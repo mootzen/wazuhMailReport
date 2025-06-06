@@ -39,20 +39,20 @@ PREV_LOG_GZ="$PREV_LOG.gz"
 echo "[$$] Debug: Searching for logs in $LOG_DIR"
 
 # Combine logs
-touch /tmp/alerts_combined.json
+touch /tmp/logon_combined.json
 echo "[$$] Extracting and merging logs using jq streaming..."
 
 if [[ -f "$PREV_LOG_GZ" ]]; then
     echo "[$$] Extracting previous day's alerts from $PREV_LOG_GZ"
-    gunzip -c "$PREV_LOG_GZ" | jq -c 'select(. != null and .timestamp >= "'$START_TIME'")' 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
+    gunzip -c "$PREV_LOG_GZ" | jq -c 'select(. != null and .timestamp >= "'$START_TIME'")' 2>> /tmp/jq_errors.log >> /tmp/logon_combined.json
 elif [[ -f "$PREV_LOG" ]]; then
     echo "[$$] Using uncompressed previous day's alerts from $PREV_LOG"
-    jq -c 'select(. != null and .timestamp >= "'$START_TIME'")' "$PREV_LOG" 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
+    jq -c 'select(. != null and .timestamp >= "'$START_TIME'")' "$PREV_LOG" 2>> /tmp/jq_errors.log >> /tmp/logon_combined.json
 else
     echo "[$$] No previous alerts found. Using only current logs."
 fi
 
-jq -c 'select(. != null and .timestamp >= "'$START_TIME'")' /var/ossec/logs/alerts/alerts.json 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
+jq -c 'select(. != null and .timestamp >= "'$START_TIME'")' /var/ossec/logs/alerts/alerts.json 2>> /tmp/jq_errors.log >> /tmp/logon_combined.json
 
 # Emoji toggle
 CRIT_EMOJI="🚨"
@@ -66,13 +66,13 @@ echo "[$$] Extracting login failure alerts..."
 LOGIN_FAILURES=$(jq -r '
     select(.rule.description | test("login|authentication"; "i")) 
     | select(.timestamp >= "'$START_TIME'")
-    | "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"' /tmp/alerts_combined.json |
+    | "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"' /tmp/logon_combined.json |
     sort | uniq -c | sort -nr | head -n 10)
 
 TOP_AGENTS=$(jq -r '
     select(.rule.description | test("login|authentication"; "i")) 
     | select(.timestamp >= "'$START_TIME'")
-    | .agent.name' /tmp/alerts_combined.json | sort | uniq -c | sort -nr | head -n 10)
+    | .agent.name' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
 
 # HTML Header
 echo "<html><head><style>
@@ -130,3 +130,9 @@ then
 else
     echo "[$$] ERROR: Failed to send email."
 fi
+cleanup() {
+    echo "[$$] Cleaning up temporary files..."
+    rm -f /tmp/logon_combined.json
+}
+trap cleanup EXIT
+echo "[$$] Script execution completed successfully!"
