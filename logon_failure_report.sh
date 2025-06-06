@@ -31,7 +31,7 @@ TOP_ALERTS=$(jq -r 'select(.rule.description?) | .rule.description' "$TMP_FILE" 
 EMAIL_BODY="""
 <html>
   <body style=\"font-family: Arial, sans-serif;\">
-    <h2 style=\"color: #2c3e50;\">🔐 Wazuh Login Failure Report (Last $TIME_PERIOD)</h2>
+    <h2 style=\"color: #2c3e50;\">Wazuh Login Failure Report (Last $TIME_PERIOD)</h2>
     <p>Total login failure alerts: <strong>$TOTAL_ALERTS</strong></p>
     <p>Mail-related login failures: <strong>$MAIL_ALERTS</strong></p>
     <h3 style=\"color: #2c3e50;\">Top $TOP_ALERTS_COUNT Alert Types</h3>
