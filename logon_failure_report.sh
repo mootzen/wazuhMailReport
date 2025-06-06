@@ -5,6 +5,11 @@ REPORT_FILE="/tmp/wazuh_logon_failure_report.html"
 START_TIME=$(date --utc -d "24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
 ENABLE_EMOJIS=true
 
+if [[ -z "$MAIL_TO" || -z "$MAIL_FROM" || -z "$MAIL_SUBJECT" ]]; then
+    echo "[$$] ERROR: MAIL_TO, MAIL_FROM, or MAIL_SUBJECT is not set."
+    exit 1
+fi
+
 echo "[DEBUG] START_TIME set to $START_TIME"
 echo "[DEBUG] Writing report to $REPORT_FILE"
 
