@@ -26,12 +26,6 @@ echo "[DEBUG] Filtered alerts: $(echo "$ALERTS" | wc -l)"
 TOTAL_ALERTS=$(echo "$ALERTS" | wc -l)
 echo "[DEBUG] Total alerts: $TOTAL_ALERTS"
 
-# Count mail-related login failures
-MAIL_ALERTS=$(echo "$ALERTS" | jq -r '
-  select(.data.srcuser? | test("mail|smtp|imap|healthmailbox"; "i"))
-' | wc -l)
-echo "[DEBUG] Mail-related alerts: $MAIL_ALERTS"
-
 # Extract top alerts
 TOP_ALERTS=$(echo "$ALERTS" | jq -r '.rule.description' | sort | uniq -c | sort -nr | head -n "$TOP_ALERTS_COUNT")
 
@@ -48,7 +42,6 @@ MAIL_BODY=$(cat <<EOF
 <body>
   <h2>Wazuh Login Failure Report (${TIME_PERIOD})</h2>
   <p><strong>Total login failure alerts:</strong> $TOTAL_ALERTS</p>
-  <p><strong>Mail-related login failures:</strong> $MAIL_ALERTS</p>
   <h3>Top ${TOP_ALERTS_COUNT} Alert Types</h3>
   <ul>
 $(echo "$TOP_ALERTS" | awk '{count=$1; $1=""; desc=substr($0,2); print "<li><strong>" count "</strong> - " desc "</li>"}')
