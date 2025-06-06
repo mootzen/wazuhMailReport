@@ -1,90 +1,48 @@
 #!/bin/bash
 
-# Configuration
-LEVEL=5
-TIME_PERIOD="1d"
-MAIL_TO="x@y.com"
-MAIL_FROM="reporter@wazuh"
-MAIL_SUBJECT="Wazuh Login Failure Report"
-FONT="Arial, sans-serif"
-HEADING_COLOR="#b30000"
-USE_EMOJIS=true
+# Load config
+CONFIG_FILE="$(dirname "$0")/report.conf"
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+else
+    echo "Config file not found: $CONFIG_FILE" >&2
+    exit 1
+fi
 
-# Emoji function
-emoji() {
-    if [ "$USE_EMOJIS" = true ]; then
-        echo "$1"
-    else
-        echo ""
-    fi
-}
+# Set filters for login failures only
+TIME_FILTER="now-${TIME_PERIOD}"
 
-# Temporary file to hold alerts
-TMP_ALERTS=$(mktemp /tmp/wazuh_alerts_XXXX.json)
+# Create a temporary file
+TMP_FILE=$(mktemp)
 
-# Fetch alerts
-/var/ossec/bin/wazuh-logtest -j > /dev/null 2>&1  # ensure it runs once if needed
-/var/ossec/bin/wazuh-db query "SELECT * FROM alert WHERE level >= $LEVEL AND timestamp > datetime('now', '-$TIME_PERIOD');" > "$TMP_ALERTS"
+# Extract relevant alerts from the last TIME_PERIOD with login failure context
+jq -r \
+    --arg time_filter "$TIME_FILTER" \
+    'select((.rule.groups[]? == "authentication_failed" or .rule.mitre.technique[]? == "Brute Force") and .@timestamp >= $time_filter)' \
+    /var/ossec/logs/alerts/alerts.json > "$TMP_FILE"
 
-# Extract login failure alerts
-LOGIN_FAILURE_ALERTS=$(jq -r '
-  select(
-    type == "object" and 
-    (.rule.groups | index("authentication_success") | not) and
-    (
-      (.rule.groups | index("authentication_failed")) or 
-      (.rule.mitre.technique == "Valid Accounts")
-    )
-  ) 
-  | "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"
-' "$TMP_ALERTS" | sort | uniq -c | sort -nr | head -n 10)
+# Generate summary counts
+TOTAL_ALERTS=$(wc -l < "$TMP_FILE")
+MAIL_ALERTS=$(grep -c -i "email" "$TMP_FILE")
 
-# Count total matching alerts
-TOTAL_LOGIN_FAILURES=$(jq -r '
-  select(
-    type == "object" and 
-    (.rule.groups | index("authentication_success") | not) and
-    (
-      (.rule.groups | index("authentication_failed")) or 
-      (.rule.mitre.technique == "Valid Accounts")
-    )
-  )
-' "$TMP_ALERTS" | wc -l)
+# Extract top alert messages
+TOP_ALERTS=$(jq -r 'select(.rule.description?) | .rule.description' "$TMP_FILE" | sort | uniq -c | sort -nr | head -n ${TOP_ALERTS_COUNT})
 
-# Compose HTML report
-REPORT_HTML=$(cat <<EOF
-<!DOCTYPE html>
+# Compose HTML email
+EMAIL_BODY="""
 <html>
-<head>
-  <style>
-    body { font-family: $FONT; background: #f9f9f9; padding: 20px; }
-    h2 { color: $HEADING_COLOR; }
-    table { border-collapse: collapse; width: 100%; background: #fff; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #eee; }
-    .emoji { font-size: 1.2em; }
-  </style>
-</head>
-<body>
-  <h2>${MAIL_SUBJECT}</h2>
-  <p>${TOTAL_LOGIN_FAILURES} login failure alerts in the last ${TIME_PERIOD}.</p>
+  <body style=\"font-family: Arial, sans-serif;\">
+    <h2 style=\"color: #2c3e50;\">🔐 Wazuh Login Failure Report (Last $TIME_PERIOD)</h2>
+    <p>Total login failure alerts: <strong>$TOTAL_ALERTS</strong></p>
+    <p>Mail-related login failures: <strong>$MAIL_ALERTS</strong></p>
+    <h3 style=\"color: #2c3e50;\">Top $TOP_ALERTS_COUNT Alert Types</h3>
+    <pre style=\"background-color: #f4f4f4; padding: 10px; border: 1px solid #ccc;\">$TOP_ALERTS</pre>
+  </body>
+</html>
+"""
 
-  <h3>🔐 Top Login Failures</h3>
-  <table>
-    <tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>
-EOF
-)
+# Send the email
+echo "$EMAIL_BODY" | mail -a "Content-Type: text/html" -s "$MAIL_SUBJECT" -r "$MAIL_FROM" "$MAIL_TO"
 
-# Add alert rows
-while IFS=$'\t' read -r COUNT LEVEL RULE_ID DESC; do
-  REPORT_HTML+="<tr><td>$COUNT</td><td>$LEVEL</td><td>$RULE_ID</td><td>$DESC</td></tr>"
-done <<< "$LOGIN_FAILURE_ALERTS"
-
-# Close HTML
-REPORT_HTML+="</table></body></html>"
-
-# Send mail
-echo "$REPORT_HTML" | mail -a "Content-Type: text/html" -s "$MAIL_SUBJECT" -r "$MAIL_FROM" "$MAIL_TO"
-
-# Cleanup
-rm "$TMP_ALERTS"
+# Clean up
+rm "$TMP_FILE"
