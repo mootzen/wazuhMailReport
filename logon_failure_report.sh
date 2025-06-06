@@ -101,3 +101,8 @@ echo "MIME-Version: 1.0"
 echo "Content-Type: text/html; charset=UTF-8"
 cat "$REPORT_FILE"
 ) | sendmail -f "$MAIL_FROM" "$MAIL_TO"
+if sendmail -f "$MAIL_FROM" "$MAIL_TO" < "$REPORT_FILE"; then
+    echo "[$$] Email sent successfully."
+else
+    echo "[$$] ERROR: Failed to send email."
+fi
