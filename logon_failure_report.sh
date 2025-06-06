@@ -94,3 +94,10 @@ fi
 # Footer
 echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically generated login failure report. Issues? Report on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub</a>.</p>" >> "$REPORT_FILE"
 echo "</body></html>" >> "$REPORT_FILE"
+echo "[$$] Sending email report..."
+(
+echo "Subject: $MAIL_SUBJECT"
+echo "MIME-Version: 1.0"
+echo "Content-Type: text/html; charset=UTF-8"
+cat "$REPORT_FILE"
+) | sendmail -f "$MAIL_FROM" "$MAIL_TO"
