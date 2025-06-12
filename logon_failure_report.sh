@@ -64,15 +64,17 @@ AGENT_EMOJI="🤖"
 echo "[$$] Extracting login failure alerts..."
 
 LOGIN_FAILURES=$(jq -r '
-    select(.rule.description | test("login|authentication"; "i")) 
+    select(.rule.description | test("login|authentication"; "i"))
+    | select(.rule.id != 92657)
     | select(.timestamp >= "'$START_TIME'")
-    | "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"' /tmp/logon_combined.json |
+    | "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"' /tmp/alerts_combined.json |
     sort | uniq -c | sort -nr | head -n 10)
 
 TOP_AGENTS=$(jq -r '
-    select(.rule.description | test("login|authentication"; "i")) 
+    select(.rule.description | test("login|authentication"; "i"))
+    | select(.rule.id != 92657)
     | select(.timestamp >= "'$START_TIME'")
-    | .agent.name' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
+    | .agent.name' /tmp/alerts_combined.json | sort | uniq -c | sort -nr | head -n 10)
 
 # HTML Header
 echo "<html><head><style>
