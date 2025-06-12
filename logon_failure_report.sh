@@ -9,7 +9,7 @@ else
 fi
 
 # Subject set dynamically
-MAIL_SUBJECT="🚨 Wazuh Logon Report - $(date '+%Y-%m-%d %H:%M')"
+LOGON_MAIL_SUBJECT="🚨 Wazuh Logon Report - $(date '+%Y-%m-%d %H:%M')"
 
 # Other constants
 REPORT_FILE="/tmp/wazuh_logon_failure_report.html"
@@ -17,13 +17,13 @@ START_TIME=$(date --utc -d "24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
 ENABLE_EMOJIS=true
 
 # Verify mail settings
-if [[ -z "$MAIL_TO" || -z "$MAIL_FROM" ]]; then
-    echo "[$$] ERROR: MAIL_TO or MAIL_FROM is not set in config."
+if [[ -z "$LOGON_MAIL_TO" || -z "$LOGON_MAIL_FROM" ]]; then
+    echo "[$$] ERROR: LOGON_MAIL_TO or LOGON_MAIL_FROM is not set in config."
     exit 1
 fi
 
-if [[ -z "$MAIL_TO" || -z "$MAIL_FROM" || -z "$MAIL_SUBJECT" ]]; then
-    echo "[$$] ERROR: MAIL_TO, MAIL_FROM, or MAIL_SUBJECT is not set."
+if [[ -z "$LOGON_MAIL_TO" || -z "$LOGON_MAIL_FROM" || -z "$LOGON_MAIL_SUBJECT" ]]; then
+    echo "[$$] ERROR: LOGON_MAIL_TO, LOGON_MAIL_FROM, or LOGON_MAIL_SUBJECT is not set."
     exit 1
 fi
 
@@ -118,8 +118,8 @@ echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically gen
 echo "</body></html>" >> "$REPORT_FILE"
 echo "[$$] Sending email report..."
 
-if sendmail -f "$MAIL_FROM" "$MAIL_TO" <<EOF
-Subject: $MAIL_SUBJECT
+if sendmail -f "$LOGON_MAIL_FROM" "$LOGON_MAIL_TO" <<EOF
+Subject: $LOGON_MAIL_SUBJECT
 MIME-Version: 1.0
 Content-Type: text/html; charset=UTF-8
 
