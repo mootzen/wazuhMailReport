@@ -71,7 +71,7 @@ LOGIN_FAILURES=$(jq -r '
     sort | uniq -c | sort -nr | head -n 10)
 TOP_AGENTS=$(jq -r '
     select(.rule.description | test("login|authentication"; "i"))
-    | select((.rule.id | tonumber) != 92657)
+    | select((.rule.id | tonumber) as $id | [$id] | inside([92657, 112001, 5501, 5502, 5715, 92652]) | not)
     | select(.timestamp >= "'$START_TIME'")
     | .agent.name' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
 
