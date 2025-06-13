@@ -65,7 +65,7 @@ echo "[$$] Extracting login failure alerts..."
 
 LOGIN_FAILURES=$(jq -r '
     select(.rule.description | test("login|authentication"; "i"))
-    | select((.rule.id | tonumber) != 92657)
+    | select((.rule.id | tonumber) as $id | [$id] | inside([92657, 112001, 5501, 5502, 5715, 92652]) | not)
     | select(.timestamp >= "'$START_TIME'")
     | "\(.rule.level)\t\(.rule.id)\t\(.rule.description)"' /tmp/logon_combined.json |
     sort | uniq -c | sort -nr | head -n 10)
