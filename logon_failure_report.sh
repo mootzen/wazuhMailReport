@@ -99,35 +99,32 @@ cat <<EOF >> "$REPORT_FILE"
 EOF
 
 # Pie Chart
-if [[ -n "$LOGIN_FAILURES" ]]; then
-cat <<EOF >> "$REPORT_FILE"
-<h3>🔍 Login Failure Distribution (Top 10)</h3>
 if [[ -f /tmp/login_chart.png ]]; then
-    echo "<h3>🔍 Login Failure Distribution (Top 10)</h3>" >> "$REPORT_FILE"
-    echo "<img src=\"cid:loginchart\">" >> "$REPORT_FILE"
+  echo "<h3>🔍 Login Failure Distribution (Top 10)</h3>" >> "$REPORT_FILE"
+  echo "<img src=\"cid:loginchart\">" >> "$REPORT_FILE"
 fi
-EOF
+
 # Login failures table
 if [[ -z "$LOGIN_FAILURES" ]]; then
-    echo "<p class='gray'>No login failures found in the last 24 hours.</p>" >> "$REPORT_FILE"
+  echo "<p class='gray'>No login failures found in the last 24 hours.</p>" >> "$REPORT_FILE"
 else
-    echo "<h3>$WARN_EMOJI Top Login Failures</h3>" >> "$REPORT_FILE"
-    echo "<table><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
-    echo "$LOGIN_FAILURES" | while IFS="|" read -r count level rule_id desc; do
-        cls=$([[ "$level" -ge 12 ]] && echo "critical" || echo "warning")
-        echo "<tr class=\"$cls\"><td>$count</td><td>$level</td><td>$rule_id</td><td>$desc</td></tr>"
-    done >> "$REPORT_FILE"
-    echo "</table>" >> "$REPORT_FILE"
+  echo "<h3>$WARN_EMOJI Top Login Failures</h3>" >> "$REPORT_FILE"
+  echo "<table><tr><th>Count</th><th>Level</th><th>Rule ID</th><th>Description</th></tr>" >> "$REPORT_FILE"
+  echo "$LOGIN_FAILURES" | while IFS="|" read -r count level rule_id desc; do
+    cls=$([[ "$level" -ge 12 ]] && echo "critical" || echo "warning")
+    echo "<tr class=\"$cls\"><td>$count</td><td>$level</td><td>$rule_id</td><td>$desc</td></tr>"
+  done >> "$REPORT_FILE"
+  echo "</table>" >> "$REPORT_FILE"
 fi
 
 # Top agents
 if [[ -z "$TOP_AGENTS" ]]; then
-    echo "<p class='gray'>No agents reported login failures in the last 24 hours.</p>" >> "$REPORT_FILE"
+  echo "<p class='gray'>No agents reported login failures in the last 24 hours.</p>" >> "$REPORT_FILE"
 else
-    echo "<h3>$AGENT_EMOJI Top Agents (by login failure count)</h3>" >> "$REPORT_FILE"
-    echo "<table><tr><th>Count</th><th>Agent Name</th></tr>" >> "$REPORT_FILE"
-    echo "$TOP_AGENTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td></tr>"}' >> "$REPORT_FILE"
-    echo "</table>" >> "$REPORT_FILE"
+  echo "<h3>$AGENT_EMOJI Top Agents (by login failure count)</h3>" >> "$REPORT_FILE"
+  echo "<table><tr><th>Count</th><th>Agent Name</th></tr>" >> "$REPORT_FILE"
+  echo "$TOP_AGENTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td></tr>"}' >> "$REPORT_FILE"
+  echo "</table>" >> "$REPORT_FILE"
 fi
 
 # Footer
