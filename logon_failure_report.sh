@@ -64,6 +64,10 @@ LOGIN_FAILURES=$(echo "$LOGIN_FAILURES_RAW" | sort | uniq -c | sort -nr | head -
 CHART_LABELS=$(echo "$LOGIN_FAILURES" | cut -d'|' -f3- | sed 's/"/\\"/g' | awk '{print "\"" $0 "\""}' | paste -sd "," -)
 CHART_COUNTS=$(echo "$LOGIN_FAILURES" | cut -d'|' -f1 | paste -sd "," -)
 
+# Clean label format (remove quotes from labels)
+LABELS_CLEAN=$(echo "$CHART_LABELS" | sed 's/"//g')
+node /opt/wazuh-logon-report/render_pie_chart.js "$LABELS_CLEAN" "$CHART_COUNTS"
+
 TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
     select(
         (.rule.description | test("login|authentication"; "i")) or
@@ -89,7 +93,6 @@ cat <<EOF > "$REPORT_FILE"
     .warning { background-color: #fff3cd; }
     .gray { color: gray; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <h2>$CRIT_EMOJI Wazuh Login Failure Report (Last 24 Hours)</h2>
@@ -99,33 +102,9 @@ EOF
 if [[ -n "$LOGIN_FAILURES" ]]; then
 cat <<EOF >> "$REPORT_FILE"
 <h3>🔍 Login Failure Distribution (Top 10)</h3>
-<canvas id="loginChart" width="400" height="400"></canvas>
-<script>
-const ctx = document.getElementById('loginChart').getContext('2d');
-const loginChart = new Chart(ctx, {
-    type: 'pie',
-    data: {
-        labels: [${CHART_LABELS}],
-        datasets: [{
-            label: 'Login Failures',
-            data: [${CHART_COUNTS}],
-            backgroundColor: [
-                '#ff4c4c','#ff884c','#ffcc4c','#d0ff4c',
-                '#4cff62','#4cffe1','#4ca7ff','#4c5cff','#a84cff','#ff4caa'
-            ]
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: {
-                position: 'right'
-            }
-        }
-    }
-});
-</script>
-EOF
+if [[ -f /tmp/login_chart.png ]]; then
+    echo "<h3>🔍 Login Failure Distribution (Top 10)</h3>" >> "$REPORT_FILE"
+    echo "<img src=\"cid:loginchart\">" >> "$REPORT_FILE"
 fi
 
 # Login failures table
@@ -155,19 +134,26 @@ fi
 echo "<p style='font-size: 12px; color: lightgray;'>This is an automatically generated login failure report. Issues? Report on <a href='https://github.com/mootzen/wazuhMailReport/issues' target='_blank'>GitHub</a>.</p>" >> "$REPORT_FILE"
 echo "</body></html>" >> "$REPORT_FILE"
 
-echo "[$$] Sending email report..."
-if sendmail -f "$LOGON_MAIL_FROM" "$LOGON_MAIL_TO" <<EOF
-Subject: $LOGON_MAIL_SUBJECT
-MIME-Version: 1.0
-Content-Type: text/html; charset=UTF-8
-
-$(cat "$REPORT_FILE")
-EOF
-then
-    echo "[$$] Email sent successfully."
-else
-    echo "[$$] ERROR: Failed to send email."
-fi
+(
+echo "Subject: $LOGON_MAIL_SUBJECT"
+echo "MIME-Version: 1.0"
+echo "Content-Type: multipart/related; boundary=\"boundary42\""
+echo
+echo "--boundary42"
+echo "Content-Type: text/html; charset=UTF-8"
+echo "Content-Transfer-Encoding: 7bit"
+echo
+cat "$REPORT_FILE"
+echo
+echo "--boundary42"
+echo "Content-Type: image/png"
+echo "Content-Transfer-Encoding: base64"
+echo "Content-ID: <loginchart>"
+echo "Content-Disposition: inline; filename=\"login_chart.png\""
+echo
+base64 /tmp/login_chart.png
+echo "--boundary42--"
+) | sendmail -f "$LOGON_MAIL_FROM" "$LOGON_MAIL_TO"
 
 cleanup() {
     echo "[$$] Cleaning up temporary files..."
