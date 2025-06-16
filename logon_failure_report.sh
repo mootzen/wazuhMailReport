@@ -66,7 +66,7 @@ CHART_COUNTS=$(echo "$LOGIN_FAILURES" | cut -d'|' -f1 | paste -sd "," -)
 
 # Clean label format (remove quotes from labels)
 LABELS_CLEAN=$(echo "$CHART_LABELS" | sed 's/"//g')
-node /opt/wazuh-logon-report/render_pie_chart.js "$LABELS_CLEAN" "$CHART_COUNTS"
+node render_pie_chart.js "$LABELS_CLEAN" "$CHART_COUNTS"
 
 TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
     select(
