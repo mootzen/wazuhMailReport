@@ -9,10 +9,10 @@ else
     exit 1
 fi
 
-LOGON_MAIL_SUBJECT="🚨 Wazuh Logon Report - $(date '+%Y-%m-%d %H:%M')"
+LOGON_MAIL_SUBJECT="Wazuh Logon Report - $(date '+%Y-%m-%d %H:%M')"
 REPORT_FILE="/tmp/wazuh_logon_failure_report.html"
 START_TIME=$(date --utc -d "24 hours ago" +%Y-%m-%dT%H:%M:%SZ)
-ENABLE_EMOJIS=true
+ENABLE_EMOJIS=false
 
 if [[ -z "$LOGON_MAIL_TO" || -z "$LOGON_MAIL_FROM" ]]; then
     echo "[$$] ERROR: LOGON_MAIL_TO or LOGON_MAIL_FROM is not set in config."
