@@ -80,7 +80,7 @@ TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
 ' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
 
 # HTML Header
-cat << EOF >> "$REPORT_FILE"
+cat <<EOF >> "$REPORT_FILE"
 <html>
 <head>
   <style>
