@@ -103,7 +103,7 @@ EOF
 
 # Pie Chart
 if [[ -f /tmp/login_chart.png ]]; then
-  echo "<h3>🔍 Login Failure Distribution (Top 10)</h3>" >> "$REPORT_FILE"
+  echo "<h3>Login Failure Distribution (Top 10)</h3>" >> "$REPORT_FILE"
   echo "<img src=\"cid:loginchart\">" >> "$REPORT_FILE"
 fi
 
