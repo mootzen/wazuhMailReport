@@ -59,7 +59,7 @@ LOGIN_FAILURES_RAW=$(jq -r --arg start_time "$START_TIME" '
   | select(.timestamp >= $start_time)
   | "\(.rule.level)|\(.rule.id)|\(.rule.description)"' /tmp/logon_combined.json)
 
-LOGIN_FAILURES=$(echo "$LOGIN_FAILURES_RAW" | sort | uniq -c | sort -nr | head -n 10 | awk '{print $1"|"$2}' | while IFS="|" read -r count rest; do echo "$count|$rest"; done)
+LOGIN_FAILURES=$(echo "$LOGIN_FAILURES_RAW" | sort | uniq -c | sort -nr | head -n 10 | sed 's/^[[:space:]]*\([0-9]\+\) \(.*\)/\1|\2/')
 
 CHART_LABELS=$(echo "$LOGIN_FAILURES" | cut -d'|' -f3- | sed 's/"/\\"/g' | awk '{print "\"" $0 "\""}' | paste -sd "," -)
 CHART_COUNTS=$(echo "$LOGIN_FAILURES" | cut -d'|' -f1 | paste -sd "," -)
