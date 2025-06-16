@@ -19,6 +19,9 @@ if [[ -z "$LOGON_MAIL_TO" || -z "$LOGON_MAIL_FROM" ]]; then
     exit 1
 fi
 
+REPORT_FILE="/tmp/wazuh_logon_failure_report.html"
+rm -f "$REPORT_FILE"
+
 echo "[DEBUG] START_TIME set to $START_TIME"
 echo "[DEBUG] Writing report to $REPORT_FILE"
 
