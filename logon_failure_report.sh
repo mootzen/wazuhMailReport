@@ -71,7 +71,7 @@ LOGIN_FAILURES_RAW=$(jq -r '
   | select(.rule.description | test("CIS"; "i") | not)
   | select((.rule.id | tonumber) as $id | [$id] | inside([92657, 112001, 5501, 5502, 5715, 92652]) | not)
   | select(.timestamp >= "'$START_TIME'")
-  | "\(.rule.description)"' /tmp/alerts_combined.json)
+  | "\(.rule.description)"' /tmp/logon_combined.json)
 
 LOGIN_FAILURES=$(echo "$LOGIN_FAILURES_RAW" | sort | uniq -c | sort -nr | head -n 10)
 
