@@ -106,7 +106,7 @@ if [[ -f /tmp/login_chart.png ]]; then
     echo "<h3>🔍 Login Failure Distribution (Top 10)</h3>" >> "$REPORT_FILE"
     echo "<img src=\"cid:loginchart\">" >> "$REPORT_FILE"
 fi
-
+EOF
 # Login failures table
 if [[ -z "$LOGIN_FAILURES" ]]; then
     echo "<p class='gray'>No login failures found in the last 24 hours.</p>" >> "$REPORT_FILE"
