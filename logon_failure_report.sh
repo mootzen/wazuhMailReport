@@ -77,16 +77,17 @@ echo "[$$] Extracting top agents..."
 TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
     select(
         (.rule.description | test("login|authentication"; "i")) or
-        (.rule.groups | index("authentication_failed"))
+        (.rule.groups | index("authentication_failure"))
     )
     | select(.rule.description | test("CIS"; "i") | not)
     | select((.rule.id | tonumber) as $id | [$id] | inside([92657, 112001, 5501, 5502, 5715, 92652]) | not)
     | select(.timestamp >= $start_time)
     | .agent.name
 ' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
+
 echo "[$$] Extracting MITRE Techniques..."
 MITRE_TOP=$(jq -r 'select(.rule.mitre != null) |
-           select(.rule.groups[]? == "authentication") |
+           select(.rule.groups[]? == "authentication_failure") |
            .rule.mitre.tactic[] as $tactic |
            .rule.mitre.technique[] as $technique |
            .rule.mitre.id[] as $id |
