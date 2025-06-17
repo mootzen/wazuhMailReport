@@ -82,11 +82,12 @@ TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
     | .agent.name
 ' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
 
-MITRE_SUMMARY=$(echo "$LOGIN_FAILURES" | jq -r '
-  .[] 
-  | select(.rule.mitre.tactic != null) 
-  | "\(.rule.mitre.tactic)|\(.rule.mitre.technique)|\(.rule.mitre.id)"
-' | sort | uniq -c | sort -nr | awk '{print $1 "|" $2 "|" $3 "|" $4}')
+MITRE_TOP=$(jq -r 'select(.rule.mitre != null) |
+           .rule.mitre.tactic[] as $tactic |
+           .rule.mitre.technique[] as $technique |
+           .rule.mitre.id[] as $id |
+           [$tactic, $technique, $id] | @tsv' "/tmp/logon_combined.json" |
+         sort | uniq -c | sort -nr | head -10)
 
 # HTML Header
 cat <<EOF >> "$REPORT_FILE"
@@ -113,15 +114,14 @@ if [[ -f /tmp/login_chart.png ]]; then
   echo "<img src=\"cid:loginchart\">" >> "$REPORT_FILE"
 fi
 
-if [[ -n "$MITRE_SUMMARY" ]]; then
-  echo "<h3>MITRE ATT&CK Techniques (from Login Failures)</h3>" >> "$REPORT_FILE"
+
+if [[ -n "$MITRE_TOP" ]]; then
+  echo "<h3>MITRE ATT&CK Techniques</h3>" >> "$REPORT_FILE"
   echo "<table><tr><th>Count</th><th>Tactic</th><th>Technique</th><th>ID</th></tr>" >> "$REPORT_FILE"
-  echo "$MITRE_SUMMARY" | while IFS="|" read -r count tactic technique tid; do
-    echo "<tr><td>$count</td><td>$tactic</td><td>$technique</td><td>$tid</td></tr>"
+  echo "$MITRE_TOP" | while IFS=$'\t' read -r count tactic technique id; do
+    echo "<tr><td>$count</td><td>$tactic</td><td>$technique</td><td>$id</td></tr>"
   done >> "$REPORT_FILE"
   echo "</table>" >> "$REPORT_FILE"
-else
-  echo "<p class='gray'>No MITRE ATT&CK classifications found in login failures.</p>" >> "$REPORT_FILE"
 fi
 
 # Login failures table
