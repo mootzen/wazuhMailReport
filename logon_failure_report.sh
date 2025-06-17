@@ -55,7 +55,7 @@ echo "[$$] Extracting login failure alerts..."
 LOGIN_FAILURES_RAW=$(jq -r --arg start_time "$START_TIME" '
   select(
     (.rule.description | test("login|authentication"; "i")) or
-    (.rule.groups | index("authentication_failure"))
+    (.rule.groups | index("authentication"))
   )
   | select(.rule.description | test("CIS"; "i") | not)
   | select((.rule.id | tonumber) as $id | [$id] | inside([92657, 112001, 5501, 5502, 5715, 92652]) | not)
@@ -77,7 +77,7 @@ echo "[$$] Extracting top agents..."
 TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
     select(
         (.rule.description | test("login|authentication"; "i")) or
-        (.rule.groups | index("authentication_failure"))
+        (.rule.groups | index("authentication"))
     )
     | select(.rule.description | test("CIS"; "i") | not)
     | select((.rule.id | tonumber) as $id | [$id] | inside([92657, 112001, 5501, 5502, 5715, 92652]) | not)
@@ -87,7 +87,7 @@ TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
 
 echo "[$$] Extracting MITRE Techniques..."
 MITRE_TOP=$(jq -r 'select(.rule.mitre != null) |
-           select(.rule.groups[]? == "authentication_failure") |
+           select(.rule.groups[]? == "authentication") |
            .rule.mitre.tactic[] as $tactic |
            .rule.mitre.technique[] as $technique |
            .rule.mitre.id[] as $id |
