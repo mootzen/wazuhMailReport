@@ -83,6 +83,7 @@ TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
 ' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
 
 MITRE_TOP=$(jq -r 'select(.rule.mitre != null) |
+           select(.rule.groups[]? == "authentication") |
            .rule.mitre.tactic[] as $tactic |
            .rule.mitre.technique[] as $technique |
            .rule.mitre.id[] as $id |
@@ -116,7 +117,7 @@ fi
 
 
 if [[ -n "$MITRE_TOP" ]]; then
-  echo "<h3>MITRE ATT&CK Techniques</h3>" >> "$REPORT_FILE"
+  echo "<h3>MITRE ATT&CK Techniques in Login Failures</h3>" >> "$REPORT_FILE"
   echo "<table><tr><th>Count</th><th>Tactic</th><th>Technique</th><th>ID</th></tr>" >> "$REPORT_FILE"
   echo "$MITRE_TOP" | while IFS=$'\t' read -r count tactic technique id; do
     echo "<tr><td>$count</td><td>$tactic</td><td>$technique</td><td>$id</td></tr>"
