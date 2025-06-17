@@ -69,8 +69,9 @@ CHART_COUNTS=$(echo "$LOGIN_FAILURES" | cut -d'|' -f1 | paste -sd "," -)
 
 # Clean label format (remove quotes from labels)
 LABELS_CLEAN=$(echo "$CHART_LABELS" | sed 's/"//g')
+echo "[$$] Rendering pie chart..."
 node render_pie_chart.js "$LABELS_CLEAN" "$CHART_COUNTS"
-
+echo "[$$] Extracting top agents..."
 TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
     select(
         (.rule.description | test("login|authentication"; "i")) or
@@ -81,7 +82,7 @@ TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
     | select(.timestamp >= $start_time)
     | .agent.name
 ' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
-
+echo "[$$] Extracting MITRE Techniques..."
 MITRE_TOP=$(jq -r 'select(.rule.mitre != null) |
            select(.rule.groups[]? == "authentication") |
            .rule.mitre.tactic[] as $tactic |
@@ -89,7 +90,7 @@ MITRE_TOP=$(jq -r 'select(.rule.mitre != null) |
            .rule.mitre.id[] as $id |
            [$tactic, $technique, $id] | @tsv' "/tmp/logon_combined.json" |
          sort | uniq -c | sort -nr | head -10)
-
+echo "[$$] Building HTML-Report..."
 # HTML Header
 cat <<EOF >> "$REPORT_FILE"
 <html>
