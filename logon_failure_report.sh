@@ -89,9 +89,10 @@ echo "[$$] Extracting MITRE Techniques..."
 MITRE_TOP=$(jq -r '
   select(.rule.mitre != null) |
   select(.rule.groups[]? == "authentication_failed") |
-  [ .rule.mitre.tactic[], .rule.mitre.technique[], .rule.mitre.id[] ] as $all |
-  [ $all[0], $all[1], $all[2] ] | @tsv
-' /tmp/logon_combined.json |
+  [ .rule.mitre.tactic, .rule.mitre.technique, .rule.mitre.id ] |
+  transpose[] |
+  @tsv
+' "/tmp/logon_combined.json" |
 sort | uniq -c | sort -nr | head -10)
 
 echo "[$$] Building HTML-Report..."
