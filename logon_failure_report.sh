@@ -86,13 +86,13 @@ TOP_AGENTS=$(jq -r --arg start_time "$START_TIME" '
 ' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
 
 echo "[$$] Extracting MITRE Techniques..."
-MITRE_TOP=$(jq -r 'select(.rule.mitre != null) |
-           select(.rule.groups[]? == "authentication_failed") |
-           .rule.mitre.tactic[] as $tactic |
-           .rule.mitre.technique[] as $technique |
-           .rule.mitre.id[] as $id |
-           [$tactic, $technique, $id] | @tsv' "/tmp/logon_combined.json" |
-         sort | uniq -c | sort -nr | head -10)
+MITRE_TOP=$(jq -r '
+  select(.rule.mitre != null) |
+  select(.rule.groups[]? == "authentication_failed") |
+  [ .rule.mitre.tactic[], .rule.mitre.technique[], .rule.mitre.id[] ] as $all |
+  [ $all[0], $all[1], $all[2] ] | @tsv
+' /tmp/logon_combined.json |
+sort | uniq -c | sort -nr | head -10)
 
 echo "[$$] Building HTML-Report..."
 # HTML Header
