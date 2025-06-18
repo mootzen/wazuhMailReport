@@ -92,8 +92,10 @@ MITRE_TOP=$(jq -r '
   [ .rule.mitre.tactic, .rule.mitre.technique, .rule.mitre.id ] |
   transpose[] |
   @tsv
-' "/tmp/logon_combined.json" |
-sort | uniq -c | sort -nr | head -10)
+' /tmp/logon_combined.json | 
+sort | uniq -c | 
+awk '{count=$1; $1=""; sub(/^ +/, ""); print count "\t" $0}' |
+sort -nr | head -10)
 
 echo "[$$] Building HTML-Report..."
 # HTML Header
