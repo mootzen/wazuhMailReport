@@ -59,15 +59,16 @@ touch /tmp/alerts_combined.json
 echo "[$$] Extracting and merging logs using jq streaming..."
 
 # Extract and merge logs
+# Extract and merge logs safely
 if [[ -f "$PREV_LOG_GZ" ]]; then
     echo "[$$] Extracting previous day's alerts from $PREV_LOG_GZ"
-    gunzip -c "$PREV_LOG_GZ" | jq -c --arg start_time "$START_TIME" 'try select(. != null and .timestamp >= $start_time) catch empty'
+    gunzip -c "$PREV_LOG_GZ" | jq -c --arg start_time "$START_TIME" 'try select(. != null and .timestamp >= $start_time) catch empty' 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
 elif [[ -f "$PREV_LOG" ]]; then
     echo "[$$] Using uncompressed previous day's alerts from $PREV_LOG"
-    jq -c 'select(. != null) | select(.timestamp >= "'$START_TIME'")' "$PREV_LOG" 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
+    jq -c --arg start_time "$START_TIME" 'try select(. != null and .timestamp >= $start_time) catch empty' "$PREV_LOG" 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
 else
     echo "[$$] No previous alerts found. Using only current logs."
-    jq -c 'select(. != null) | select(.timestamp >= "'$START_TIME'")' /var/ossec/logs/alerts/alerts.json 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
+    jq -c --arg start_time "$START_TIME" 'try select(. != null and .timestamp >= $start_time) catch empty' /var/ossec/logs/alerts/alerts.json 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
 fi
 
 # Wait a moment to ensure file is created
