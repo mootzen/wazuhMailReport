@@ -61,7 +61,7 @@ echo "[$$] Extracting and merging logs using jq streaming..."
 # Extract and merge logs
 if [[ -f "$PREV_LOG_GZ" ]]; then
     echo "[$$] Extracting previous day's alerts from $PREV_LOG_GZ"
-    gunzip -c "$PREV_LOG_GZ" | jq -c 'select(. != null) | select(.timestamp >= "'$START_TIME'")' 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
+    gunzip -c "$PREV_LOG_GZ" | jq -c --arg start_time "$START_TIME" 'try select(. != null and .timestamp >= $start_time) catch empty'
 elif [[ -f "$PREV_LOG" ]]; then
     echo "[$$] Using uncompressed previous day's alerts from $PREV_LOG"
     jq -c 'select(. != null) | select(.timestamp >= "'$START_TIME'")' "$PREV_LOG" 2>> /tmp/jq_errors.log >> /tmp/alerts_combined.json
