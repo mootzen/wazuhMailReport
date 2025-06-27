@@ -171,7 +171,9 @@ fi
 if [[ -n "$TOP_USERS" ]]; then
   echo "<h3>Top Usernames in Failed Logins</h3>" >> "$REPORT_FILE"
   echo "<table><tr><th>Count</th><th>Username</th></tr>" >> "$REPORT_FILE"
-  echo "$TOP_USERS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td></tr>"}' >> "$REPORT_FILE"
+  echo "$TOP_USERS" | while read -r count user; do
+    echo "<tr><td>$count</td><td>$user</td></tr>"
+  done >> "$REPORT_FILE"
   echo "</table>" >> "$REPORT_FILE"
 fi
 
