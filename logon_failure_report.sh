@@ -112,9 +112,7 @@ grep -vE '^(null|SYSTEM|LOCAL SERVICE|NETWORK SERVICE)?$' |
 grep -v '^$' |
 sort |
 uniq -c |
-sort -nr |
-head -n 10 |
-awk '{$1=$1; print}'  # remove leading spaces properly
+sort -nr
 )
 
 echo "[$$] Building HTML-Report..."
@@ -179,8 +177,8 @@ fi
 if [[ -n "$TOP_USERS" ]]; then
   echo "<h3>Top Usernames in Failed Logins</h3>" >> "$REPORT_FILE"
   echo "<table><tr><th>Count</th><th>Username</th></tr>" >> "$REPORT_FILE"
-  echo "$TOP_USERS" | while read -r count user; do
-    echo "<tr><td>$count</td><td>$user</td></tr>"
+  echo "$TOP_USERS" | while read -r count username; do
+    echo "<tr><td>$count</td><td>$username</td></tr>"
   done >> "$REPORT_FILE"
   echo "</table>" >> "$REPORT_FILE"
 fi
