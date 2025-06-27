@@ -98,6 +98,7 @@ awk '{count=$1; $1=""; sub(/^ +/, ""); print count "\t" $0}' |
 sort -nr | head -10)
 
 echo "[$$] Extracting top usernames (Windows only)..."
+
 TOP_USERS=$(jq -r --arg start_time "$START_TIME" '
   select(.timestamp >= $start_time)
   | select(
@@ -105,9 +106,9 @@ TOP_USERS=$(jq -r --arg start_time "$START_TIME" '
       (.rule.groups | index("authentication_failed"))
     )
   | select(.rule.description | test("CIS"; "i") | not)
-  | select(.data."win.eventdata.targetUserName" != null)
-  | .data."win.eventdata.targetUserName"
-' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
+  | select(.data.win.eventdata.targetUserName != null)
+  | .data.win.eventdata.targetUserName
+' /tmp/logon_combined.json | grep -v '^$' | sort | uniq -c | sort -nr | head -n 10)
 
 echo "[$$] Building HTML-Report..."
 # HTML Header
