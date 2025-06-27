@@ -106,9 +106,8 @@ TOP_USERS=$(jq -r --arg start_time "$START_TIME" '
       (.rule.groups | index("authentication_failed"))
     )
   | select(.rule.description | test("CIS"; "i") | not)
-  | select(.data.win.eventdata.targetUserName != null)
-  | .data.win.eventdata.targetUserName
-' /tmp/logon_combined.json | grep -v '^$' | sort | uniq -c | sort -nr | head -n 10)
+  | .data.win.eventdata.targetUserName?
+' /tmp/logon_combined.json | grep -E '.+@.+' | sort | uniq -c | sort -nr | head -10)
 
 echo "[$$] Building HTML-Report..."
 # HTML Header
