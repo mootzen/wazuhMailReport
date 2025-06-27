@@ -168,10 +168,8 @@ else
   echo "</table>" >> "$REPORT_FILE"
 fi
 
-if [[ -z "$TOP_USERS" ]]; then
-  echo "<p class='gray'>No Windows usernames found in failed login attempts.</p>" >> "$REPORT_FILE"
-else
-  echo "<h3>Top Windows Usernames (Failed Logins)</h3>" >> "$REPORT_FILE"
+if [[ -n "$TOP_USERS" ]]; then
+  echo "<h3>Top Usernames in Failed Logins</h3>" >> "$REPORT_FILE"
   echo "<table><tr><th>Count</th><th>Username</th></tr>" >> "$REPORT_FILE"
   echo "$TOP_USERS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td></tr>"}' >> "$REPORT_FILE"
   echo "</table>" >> "$REPORT_FILE"
