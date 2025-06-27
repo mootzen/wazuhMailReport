@@ -106,8 +106,16 @@ TOP_USERS=$(jq -r --arg start_time "$START_TIME" '
       (.rule.groups | index("authentication_failed"))
     )
   | select(.rule.description | test("CIS"; "i") | not)
-  | .data.win.eventdata.targetUserName?
-' /tmp/logon_combined.json | grep -Ev '^(SYSTEM|LOCAL SERVICE|NETWORK SERVICE)?$' | grep -v '^$' | sort | uniq -c | sort -nr | head -n 10)
+  | .data.win.eventdata.targetUserName? // empty
+' /tmp/logon_combined.json |
+grep -vE '^(null|SYSTEM|LOCAL SERVICE|NETWORK SERVICE)?$' |
+grep -v '^$' |
+sort |
+uniq -c |
+sort -nr |
+head -n 10 |
+awk '{$1=$1; print}'  # remove leading spaces properly
+)
 
 echo "[$$] Building HTML-Report..."
 # HTML Header
