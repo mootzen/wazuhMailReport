@@ -210,7 +210,7 @@ echo "--boundary42--"
 
 cleanup() {
     echo "[$$] Cleaning up temporary files..."
-    rm -f /tmp/logon_combined.json
+    #rm -f /tmp/logon_combined.json
 }
 trap cleanup EXIT
 echo "[$$] Script execution completed successfully!"
