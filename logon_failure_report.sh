@@ -97,6 +97,18 @@ sort | uniq -c |
 awk '{count=$1; $1=""; sub(/^ +/, ""); print count "\t" $0}' |
 sort -nr | head -10)
 
+echo "[$$] Extracting top usernames (Windows only)..."
+TOP_USERS=$(jq -r --arg start_time "$START_TIME" '
+  select(.timestamp >= $start_time)
+  | select(
+      (.rule.description | test("login|authentication"; "i")) or
+      (.rule.groups | index("authentication_failed"))
+    )
+  | select(.rule.description | test("CIS"; "i") | not)
+  | select(.data."win.eventdata.targetUserName" != null)
+  | .data."win.eventdata.targetUserName"
+' /tmp/logon_combined.json | sort | uniq -c | sort -nr | head -n 10)
+
 echo "[$$] Building HTML-Report..."
 # HTML Header
 cat <<EOF >> "$REPORT_FILE"
@@ -153,6 +165,15 @@ else
   echo "<h3>$AGENT_EMOJI Top Agents (by login failure count)</h3>" >> "$REPORT_FILE"
   echo "<table><tr><th>Count</th><th>Agent Name</th></tr>" >> "$REPORT_FILE"
   echo "$TOP_AGENTS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td></tr>"}' >> "$REPORT_FILE"
+  echo "</table>" >> "$REPORT_FILE"
+fi
+
+if [[ -z "$TOP_USERS" ]]; then
+  echo "<p class='gray'>No Windows usernames found in failed login attempts.</p>" >> "$REPORT_FILE"
+else
+  echo "<h3>Top Windows Usernames (Failed Logins)</h3>" >> "$REPORT_FILE"
+  echo "<table><tr><th>Count</th><th>Username</th></tr>" >> "$REPORT_FILE"
+  echo "$TOP_USERS" | awk '{print "<tr><td>"$1"</td><td>"$2"</td></tr>"}' >> "$REPORT_FILE"
   echo "</table>" >> "$REPORT_FILE"
 fi
 
