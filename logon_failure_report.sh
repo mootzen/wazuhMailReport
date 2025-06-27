@@ -100,7 +100,13 @@ sort -nr | head -10)
 echo "[$$] Extracting top usernames (Windows only)..."
 
 TOP_USERS=$(jq -r --arg start_time "$START_TIME" '
-  select(.timestamp >= $start_time)
+  select(.timestamp != null)
+  | select(
+      (try ( (strptime("%Y-%m-%dT%H:%M:%S%z") | mktime) ) as $ts
+      | ($start_time | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime) as $start
+      | $ts >= $start )
+      // false
+  )
   | select(
       (.rule.description | test("login|authentication"; "i")) or
       (.rule.groups | index("authentication_failed"))
