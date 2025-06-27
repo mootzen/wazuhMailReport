@@ -107,7 +107,7 @@ TOP_USERS=$(jq -r --arg start_time "$START_TIME" '
     )
   | select(.rule.description | test("CIS"; "i") | not)
   | .data.win.eventdata.targetUserName?
-' /tmp/logon_combined.json | grep -E '.+@.+' | sort | uniq -c | sort -nr | head -10)
+' /tmp/logon_combined.json | grep -Ev '^(SYSTEM|LOCAL SERVICE|NETWORK SERVICE)?$' | grep -v '^$' | sort | uniq -c | sort -nr | head -n 10)
 
 echo "[$$] Building HTML-Report..."
 # HTML Header
